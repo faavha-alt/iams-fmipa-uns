@@ -98,7 +98,7 @@ class ProcurementBatchController extends Controller
     {
         return $request->validate([
             'nama' => 'required|string|max:255',
-            'vendor_id' => 'nullable|exists:vendors,id',
+            'vendor_id' => 'required|exists:vendors,id',
             'tanggal_mulai' => 'nullable|date',
             'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
             'nomor_dokumen' => 'nullable|string|max:255',

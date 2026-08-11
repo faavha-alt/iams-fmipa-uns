@@ -49,7 +49,7 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 | Lokasi | `LocationController` | Terikat ke unit |
 | Vendor | `VendorController` | Soft delete |
 | Pengajuan Aset | `AssetRequestController` | Alur approve/reject dari pengaju ke admin, wajib upload gambar + link referensi |
-| **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. Vendor saat ini **opsional** di validasi (`nullable`), meskipun idenya 1 Pengadaan = 1 vendor. |
+| **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. Vendor **wajib** di validasi (`required`). Kolom `vendor_id` di DB tetap nullable supaya data lama (dari sebelum aturan ini) tidak rusak, tapi Pengadaan baru wajib pilih vendor. |
 | **Barang Pengadaan** (`purchase_realizations`) | `RealizationController` | **Item di dalam Pengadaan** — WAJIB terikat ke satu `procurement_batch_id` (tidak boleh berdiri sendiri lagi). Finalisasi → jadi `Asset` resmi (kode + QR otomatis). |
 | Anggaran | `BudgetController` | 2 lapis: Fakultas (pagu total) → Prodi (alokasi). Realisasi dihitung dari `assets.acquisition_value` + `purchase_realizations` yang `belum_final` |
 | BAST | `HandoverReportController` | Berbasis **unit** (bukan per-realisasi) — bisa gabung banyak aset dari realisasi berbeda. Cetak F4, kop surat bisa upload gambar (di `/settings`) |
@@ -58,7 +58,7 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 | Pengaturan | `SettingController` | Key-value generic di tabel `settings`, dipakai untuk kop surat BAST |
 
 ### Alur Bisnis Pengadaan (PENTING)
-Buat Pengadaan (pilih vendor — idealnya wajib, tapi validasi saat ini masih `nullable`, lihat tabel modul di atas)
+Buat Pengadaan (pilih vendor, wajib)
 Tambah Barang ke Pengadaan itu (procurement_batch_id wajib diisi)
 Finalisasi barang → jadi Asset (kode & QR auto), vendor diambil dari Pengadaan induk
 Buat BAST per unit (bisa gabung aset dari beberapa Pengadaan sekaligus)
