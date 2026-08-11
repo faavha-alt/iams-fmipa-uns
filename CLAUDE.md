@@ -6,35 +6,41 @@ Sistem manajemen aset & pengadaan untuk Fakultas MIPA, Universitas Sebelas Maret
 
 - **Laravel 13**, PHP 8.4+
 - **MySQL** (bukan SQLite — sudah dimigrasikan)
-- **Blade + vanilla JS** — TIDAK pakai Livewire (sempat dicoba, dilepas karena masalah asset-loading di shared hosting), TIDAK pakai Tailwind/Vite build step
+- **Blade + vanilla JS** — TIDAK pakai Livewire (sempat dicoba, dilepas karena masalah asset-loading di shared hosting), TIDAK pakai Tailwind/Vite build step di aplikasi (lihat catatan "sisa scaffolding" di bawah)
 - **CSS custom** di `public/css/frontend.css` — tema cerulean blue (`#0E7DA7`) + gold (`#E9A828`), font Montserrat (judul) + Poppins (body)
 - **PhpSpreadsheet** — dipakai untuk import/export Excel (aset, kode BMN)
 - Hosting: shared hosting (panel "jogo-os"), akses via SSH
 
+### Sisa scaffolding yang belum dibersihkan
+`package.json`, `vite.config.js`, `resources/js/app.js`, `resources/css/app.css` masih setup default Tailwind/Vite bawaan `laravel new` — TIDAK dipakai aplikasi (layout pakai `frontend.css` statis lewat `asset()`, bukan `@vite`). Satu-satunya pemakai `@vite` adalah `welcome.blade.php`, yang juga tidak dipakai di alur app. Aman diabaikan, tapi jangan bingung kalau nemu file-file ini — bukan berarti Vite aktif dipakai.
+
 ## Deploy
 
-```powershell
-# Dari Windows, di folder project:
-.\deploy.ps1 "keterangan perubahan"
-```
-Ini otomatis: `git add` → `git commit` → `git push` → SSH ke server → `git pull` → `composer install` → `migrate` → clear cache.
+**Belum ada script deploy otomatis** (`deploy.ps1`/`deploy.sh` sempat didokumentasikan di sini tapi ternyata belum pernah dibuat — kalau mau dibuat, alurnya: `git add` → `git commit` → `git push` lokal → SSH ke server → `git pull` → `composer install` → `migrate` → clear cache). Untuk sekarang, deploy manual:
 
-Kalau mau manual di server:
 ```bash
+ssh iams-fmipa   # alias SSH, lihat ~/.ssh/config
 cd ~/htdocs/aset.mipa.uns.ac.id
-bash deploy.sh
+git pull
+composer install --no-dev
+php artisan migrate --force
+php artisan config:clear && php artisan cache:clear && php artisan view:clear
 ```
 
 **PENTING**: server pakai shared hosting dengan memory terbatas. Command composer/artisan yang berat kadang perlu `php -d memory_limit=-1`.
+
+**PENTING**: `.env` di server TIDAK ikut git (sengaja, demi keamanan) — perubahan `.env` di server harus dilakukan manual per-server, tidak lewat `git pull`.
 
 ## Arsitektur & Modul
 
 Tidak ada file routing terpisah per modul — semua di `routes/web.php`, dikelompokkan dalam middleware group `auth` dan `admin`.
 
 ### Role & Akses
+Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 - **admin**: akses penuh ke semua modul
 - **kepala_unit / staff**: pengaju dari unit masing-masing — cuma lihat data unit sendiri, bisa ajukan permintaan aset
-- Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`)
+- **pimpinan**: ada di enum tapi belum ada logika/otorisasi khusus di kode — perlakuannya masih sama seperti non-admin biasa (perlu diperjelas kalau mau dipakai beneran)
+- Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`, cek `role === 'admin'`)
 
 ### Modul yang sudah ada
 | Modul | Controller | Keterangan |
@@ -46,7 +52,7 @@ Tidak ada file routing terpisah per modul — semua di `routes/web.php`, dikelom
 | Lokasi | `LocationController` | Terikat ke unit |
 | Vendor | `VendorController` | Soft delete |
 | Pengajuan Aset | `AssetRequestController` | Alur approve/reject dari pengaju ke admin, wajib upload gambar + link referensi |
-| **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. 1 Pengadaan = 1 vendor. |
+| **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. Vendor saat ini **opsional** di validasi (`nullable`), meskipun idenya 1 Pengadaan = 1 vendor. |
 | **Barang Pengadaan** (`purchase_realizations`) | `RealizationController` | **Item di dalam Pengadaan** — WAJIB terikat ke satu `procurement_batch_id` (tidak boleh berdiri sendiri lagi). Finalisasi → jadi `Asset` resmi (kode + QR otomatis). |
 | Anggaran | `BudgetController` | 2 lapis: Fakultas (pagu total) → Prodi (alokasi). Realisasi dihitung dari `assets.acquisition_value` + `purchase_realizations` yang `belum_final` |
 | BAST | `HandoverReportController` | Berbasis **unit** (bukan per-realisasi) — bisa gabung banyak aset dari realisasi berbeda. Cetak F4, kop surat bisa upload gambar (di `/settings`) |
@@ -55,7 +61,7 @@ Tidak ada file routing terpisah per modul — semua di `routes/web.php`, dikelom
 | Pengaturan | `SettingController` | Key-value generic di tabel `settings`, dipakai untuk kop surat BAST |
 
 ### Alur Bisnis Pengadaan (PENTING)
-Buat Pengadaan (pilih vendor, wajib)
+Buat Pengadaan (pilih vendor — idealnya wajib, tapi validasi saat ini masih `nullable`, lihat tabel modul di atas)
 Tambah Barang ke Pengadaan itu (procurement_batch_id wajib diisi)
 Finalisasi barang → jadi Asset (kode & QR auto), vendor diambil dari Pengadaan induk
 Buat BAST per unit (bisa gabung aset dari beberapa Pengadaan sekaligus)
@@ -75,7 +81,8 @@ Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari for
 
 - **MySQL reserved word**: kolom bernama `condition` harus di-quote (`->select('condition')` bukan `->selectRaw('condition, ...')` mentah).
 - **Laravel pagination default** pakai markup Tailwind (duplikasi mobile/desktop) — sudah diganti custom view `resources/views/vendor/pagination/custom.blade.php`, didaftarkan lewat `Paginator::defaultView()` di `AppServiceProvider`.
-- **Locale tanggal**: `config/app.php` / `.env` harus `APP_LOCALE=id` supaya `Carbon::translatedFormat()` keluar bahasa Indonesia.
+- **Locale tanggal**: `config/app.php` / `.env` harus `APP_LOCALE=id` supaya `Carbon::translatedFormat()` keluar bahasa Indonesia. **Sudah pernah kejadian**: `.env` sempat punya dua baris `APP_LOCALE` (satu `en`, satu `id`) — nilai yang kepakai adalah yang PERTAMA muncul di file (perilaku phpdotenv), jadi baris kedua diam-diam tidak berlaku. Kalau curiga locale tidak jalan, cek dulu ada duplikat key atau tidak: `grep -n APP_LOCALE .env`.
+- **`APP_ENV`/`APP_DEBUG` di server sempat kebawa nilai default lokal** (`local`/`true`) padahal domain sudah live publik — bahaya karena `APP_DEBUG=true` membocorkan stack trace. Sudah diperbaiki ke `production`/`false`, tapi cek ulang tiap kali `.env` server disentuh manual.
 - **RedirectResponse tidak punya method `when()`** — itu method Query Builder/Collection, jangan dipakai di redirect chain.
 - **Hapus data via database langsung (phpMyAdmin) melewati semua safeguard aplikasi** (termasuk soft delete) — SELALU lewat halaman aplikasi, jangan pernah hapus manual di DB kecuali darurat.
 
