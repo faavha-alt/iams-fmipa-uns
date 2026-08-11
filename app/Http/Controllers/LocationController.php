@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AssetCategory;
 use App\Models\Location;
 use App\Models\Setting;
 use App\Models\Unit;
@@ -53,17 +54,85 @@ class LocationController extends Controller
     }
 
     /**
-     * Detail lokasi — daftar aset di ruangan ini, bisa langsung dihapus dari sini
-     * kalau ketahuan ada input dobel, tanpa perlu bolak-balik ke halaman Aset.
+     * Detail lokasi — rekap kategori & kondisi, tabel aset yang bisa difilter/diurutkan,
+     * QR code, dan bisa langsung dihapus dari sini kalau ketahuan ada input dobel.
      */
-    public function show(Location $location): View
+    public function show(Request $request, Location $location): View
     {
         $location->load('unit');
-        $assets = $location->assets()->with('category')->orderBy('name')->get();
+
+        $assetBase = $location->assets();
+        $totalAssets = (clone $assetBase)->count();
+        $totalValue = (clone $assetBase)->sum('acquisition_value');
+
+        $conditionCounts = (clone $assetBase)
+            ->select('condition')->selectRaw('count(*) as total')
+            ->groupBy('condition')->pluck('total', 'condition');
+
+        $conditions = collect(['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])
+            ->map(fn ($key) => [
+                'key' => $key,
+                'total' => $conditionCounts[$key] ?? 0,
+                'percent' => $totalAssets > 0 ? round((($conditionCounts[$key] ?? 0) / $totalAssets) * 100) : 0,
+            ]);
+
+        $categoryRecap = (clone $assetBase)
+            ->select('asset_category_id')->selectRaw('count(*) as total')
+            ->groupBy('asset_category_id')
+            ->with('category')
+            ->get()
+            ->sortByDesc('total')
+            ->map(fn ($row) => [
+                'name' => $row->category?->name ?? 'Tanpa Kategori',
+                'total' => $row->total,
+                'percent' => $totalAssets > 0 ? round(($row->total / $totalAssets) * 100) : 0,
+            ])
+            ->values();
+
+        // Kolom yang boleh dipakai sorting, dipetakan ke nama kolom SQL supaya tidak bisa disuntik lewat query string.
+        $sortColumns = [
+            'name' => 'assets.name',
+            'brand' => 'assets.brand',
+            'condition' => 'assets.condition',
+            'status' => 'assets.status',
+            'category' => 'asset_categories.name',
+        ];
+        $sort = array_key_exists($request->input('sort'), $sortColumns) ? $request->input('sort') : 'name';
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+
+        $assetsQuery = $location->assets()->with('category');
+        if ($sort === 'category') {
+            $assetsQuery->leftJoin('asset_categories', 'assets.asset_category_id', '=', 'asset_categories.id')->select('assets.*');
+        }
+
+        $assets = $assetsQuery
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->string('search');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('assets.name', 'like', "%{$search}%")
+                        ->orWhere('assets.brand', 'like', "%{$search}%")
+                        ->orWhere('assets.serial_number', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('category_id'), fn ($q) => $q->where('assets.asset_category_id', $request->input('category_id')))
+            ->when($request->filled('condition'), fn ($q) => $q->where('assets.condition', $request->input('condition')))
+            ->when($request->filled('status'), fn ($q) => $q->where('assets.status', $request->input('status')))
+            ->orderBy($sortColumns[$sort], $direction)
+            ->get();
+
+        $dbrUrl = route('locations.public-info', $location->id);
 
         return view('locations.show', [
             'location' => $location,
             'assets' => $assets,
+            'totalAssets' => $totalAssets,
+            'totalValue' => $totalValue,
+            'conditions' => $conditions,
+            'categoryRecap' => $categoryRecap,
+            'categories' => AssetCategory::orderBy('name')->get(),
+            'qrSvg' => QrCode::size(120)->generate($dbrUrl),
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 
