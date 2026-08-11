@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/assets/{asset}/edit', [AssetController::class, 'edit'])->name('assets.edit');
         Route::put('/assets/{asset}', [AssetController::class, 'update'])->name('assets.update');
         Route::delete('/assets/{asset}', [AssetController::class, 'destroy'])->name('assets.destroy');
+        Route::delete('/assets-bulk-destroy', [AssetController::class, 'bulkDestroy'])->name('assets.bulk-destroy');
 
         Route::post('/requests/{assetRequest}/decide', [AssetRequestController::class, 'decide'])->name('requests.decide');
 

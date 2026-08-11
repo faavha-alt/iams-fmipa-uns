@@ -36,51 +36,55 @@
         @if ($assets->count() === 0)
             <div class="empty-state">Belum ada aset yang ditempatkan di lokasi ini.</div>
         @else
-            <p style="font-size: 0.8rem; color: var(--muted); margin: -6px 0 14px;">
-                Ketemu input dobel? Hapus langsung dari sini supaya datanya tidak duplikat.
-            </p>
-            <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Nama</th>
-                        <th>Merk</th>
-                        <th>Tipe/Seri</th>
-                        <th>Kategori</th>
-                        <th>Kondisi</th>
-                        <th>Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($assets as $asset)
+            <form method="POST" action="{{ route('assets.bulk-destroy') }}" data-confirm="Yakin hapus semua aset yang dicentang? Tindakan ini tidak bisa dibatalkan.">
+                @csrf
+                @method('DELETE')
+
+                <div style="display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <p style="font-size: 0.8rem; color: var(--muted); margin: 0;">
+                        Ketemu input dobel? Centang lalu hapus sekaligus — tidak perlu konfirmasi satu per satu.
+                    </p>
+                    <button type="submit" class="btn btn-sm btn-danger">🗑 Hapus yang Dicentang</button>
+                </div>
+                @error('asset_ids') <div class="form-error" style="margin-bottom: 10px;">{{ $message }}</div> @enderror
+
+                <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td>{{ $asset->name }}</td>
-                            <td>{{ $asset->brand ?? '-' }}</td>
-                            <td>{{ collect([$asset->model, $asset->serial_number])->filter()->implode(' / ') ?: '-' }}</td>
-                            <td>{{ $asset->category?->name ?? '-' }}</td>
-                            <td><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
-                            <td>{{ str_replace('_', ' ', $asset->status) }}</td>
-                            <td>
-                                <div class="row-actions">
+                            <th style="width: 36px;">
+                                <input type="checkbox" onclick="document.querySelectorAll('.asset-check').forEach(c => c.checked = this.checked)">
+                            </th>
+                            <th>Nama</th>
+                            <th>Merk</th>
+                            <th>Tipe/Seri</th>
+                            <th>Kategori</th>
+                            <th>Kondisi</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($assets as $asset)
+                            <tr>
+                                <td><input type="checkbox" class="asset-check" name="asset_ids[]" value="{{ $asset->id }}"></td>
+                                <td>{{ $asset->name }}</td>
+                                <td>{{ $asset->brand ?? '-' }}</td>
+                                <td>{{ collect([$asset->model, $asset->serial_number])->filter()->implode(' / ') ?: '-' }}</td>
+                                <td>{{ $asset->category?->name ?? '-' }}</td>
+                                <td><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
+                                <td>{{ str_replace('_', ' ', $asset->status) }}</td>
+                                <td>
                                     <a href="{{ route('assets.edit', $asset->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     </a>
-                                    <form method="POST" action="{{ route('assets.destroy', $asset->id) }}"
-                                          style="display:inline" data-confirm="Yakin hapus aset {{ $asset->name }}? Pakai ini kalau ini input dobel, bukan aset yang benar-benar ada.">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="icon-btn icon-btn--danger" title="Hapus" aria-label="Hapus">
-                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                </div>
+            </form>
         @endif
     </div>
 </x-layouts.app>

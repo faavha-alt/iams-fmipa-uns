@@ -103,7 +103,25 @@ class AssetController extends Controller
 
         $asset->delete();
 
-        return redirect()->route('assets.index')->with('message', 'Aset berhasil dihapus.');
+        return redirect()->back()->with('message', 'Aset berhasil dihapus.');
+    }
+
+    /**
+     * Hapus banyak aset sekaligus (dicentang dari tabel) — buat bersihin input dobel
+     * tanpa harus konfirmasi hapus satu-satu.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        $data = $request->validate([
+            'asset_ids' => 'required|array|min:1',
+            'asset_ids.*' => 'exists:assets,id',
+        ]);
+
+        $count = Asset::whereIn('id', $data['asset_ids'])->delete();
+
+        return redirect()->back()->with('message', "{$count} aset berhasil dihapus.");
     }
 
     public function importForm(): View
