@@ -52,6 +52,39 @@ class LocationController extends Controller
         ]);
     }
 
+    /**
+     * Detail lokasi — daftar aset di ruangan ini, bisa langsung dihapus dari sini
+     * kalau ketahuan ada input dobel, tanpa perlu bolak-balik ke halaman Aset.
+     */
+    public function show(Location $location): View
+    {
+        $location->load('unit');
+        $assets = $location->assets()->with('category')->orderBy('name')->get();
+
+        return view('locations.show', [
+            'location' => $location,
+            'assets' => $assets,
+        ]);
+    }
+
+    /**
+     * Halaman publik (tanpa login) yang dibuka lewat scan QR code di lembar DBR.
+     */
+    public function publicInfo(Location $location): View
+    {
+        $location->load('unit');
+        $assets = $location->assets()
+            ->with('category')
+            ->where('status', '!=', 'dihapuskan')
+            ->orderBy('name')
+            ->get();
+
+        return view('locations.public-info', [
+            'location' => $location,
+            'assets' => $assets,
+        ]);
+    }
+
     public function update(Request $request, Location $location): RedirectResponse
     {
         $location->update($this->validated($request));
@@ -61,8 +94,8 @@ class LocationController extends Controller
 
     /**
      * Daftar Barang Ruangan (DBR) — versi cetak untuk ditempel fisik di ruangan.
-     * QR code di lembar ini mengarah balik ke halaman ini juga, jadi discan kapan pun
-     * akan selalu nampilkan data aset terkini di ruangan itu (bukan data statis waktu cetak).
+     * QR code di lembar ini mengarah ke halaman publik (lihat publicInfo()), jadi discan
+     * kapan pun akan selalu nampilkan data aset terkini di ruangan itu, tanpa perlu login.
      */
     public function dbr(Location $location): View
     {
@@ -73,7 +106,7 @@ class LocationController extends Controller
             ->orderBy('name')
             ->get();
 
-        $dbrUrl = route('locations.dbr', $location->id);
+        $dbrUrl = route('locations.public-info', $location->id);
 
         return view('locations.dbr', [
             'location' => $location,

@@ -45,14 +45,14 @@
                 <tbody>
                     @foreach ($locations as $location)
                         <tr>
-                            <td>{{ $location->name }}</td>
+                            <td><a href="{{ route('locations.show', $location->id) }}">{{ $location->name }}</a></td>
                             <td>{{ $location->unit->name }}</td>
                             <td>{{ $location->building ?? '-' }}</td>
                             <td>{{ $location->floor ?? '-' }}</td>
                             <td>{{ $location->room_code ?? '-' }}</td>
                             <td>{{ $location->assets_count }}</td>
                             <td>
-                                <a href="{{ route('locations.dbr', $location->id) }}" target="_blank">Cetak DBR</a>
+                                <a href="{{ route('locations.show', $location->id) }}">Detail</a>
                                 &nbsp;·&nbsp;
                                 <a href="{{ route('locations.edit', $location->id) }}">Edit</a>
                                 &nbsp;·&nbsp;

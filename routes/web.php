@@ -21,6 +21,9 @@ Route::get('/login', [LoginController::class, 'show'])->name('login')->middlewar
 Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate')->middleware('guest');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
 
+// Halaman publik, tanpa login — dibuka dari hasil scan QR code DBR yang ditempel di ruangan.
+Route::get('/ruangan/{location}', [LocationController::class, 'publicInfo'])->name('locations.public-info');
+
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -90,6 +93,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
         Route::get('/locations/{location}/dbr', [LocationController::class, 'dbr'])->name('locations.dbr');
         Route::get('/locations/{location}/edit', [LocationController::class, 'edit'])->name('locations.edit');
+        Route::get('/locations/{location}', [LocationController::class, 'show'])->name('locations.show');
         Route::put('/locations/{location}', [LocationController::class, 'update'])->name('locations.update');
         Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 
