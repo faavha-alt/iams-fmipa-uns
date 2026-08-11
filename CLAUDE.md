@@ -6,13 +6,10 @@ Sistem manajemen aset & pengadaan untuk Fakultas MIPA, Universitas Sebelas Maret
 
 - **Laravel 13**, PHP 8.4+
 - **MySQL** (bukan SQLite — sudah dimigrasikan)
-- **Blade + vanilla JS** — TIDAK pakai Livewire (sempat dicoba, dilepas karena masalah asset-loading di shared hosting), TIDAK pakai Tailwind/Vite build step di aplikasi (lihat catatan "sisa scaffolding" di bawah)
-- **CSS custom** di `public/css/frontend.css` — tema cerulean blue (`#0E7DA7`) + gold (`#E9A828`), font Montserrat (judul) + Poppins (body)
+- **Blade + vanilla JS** — TIDAK pakai Livewire (sempat dicoba, dilepas karena masalah asset-loading di shared hosting), TIDAK pakai Tailwind/Vite (scaffolding bawaan `laravel new` sudah dibuang — tidak ada `package.json`/`vite.config.js`/build step sama sekali, lihat `public/css/frontend.css` di bawah)
+- **CSS custom** di `public/css/frontend.css` — tema cerulean blue (`#0E7DA7`) + gold (`#E9A828`), font Montserrat (judul) + Poppins (body), di-load langsung lewat `asset()`, bukan Vite
 - **PhpSpreadsheet** — dipakai untuk import/export Excel (aset, kode BMN)
 - Hosting: shared hosting (panel "jogo-os"), akses via SSH
-
-### Sisa scaffolding yang belum dibersihkan
-`package.json`, `vite.config.js`, `resources/js/app.js`, `resources/css/app.css` masih setup default Tailwind/Vite bawaan `laravel new` — TIDAK dipakai aplikasi (layout pakai `frontend.css` statis lewat `asset()`, bukan `@vite`). Satu-satunya pemakai `@vite` adalah `welcome.blade.php`, yang juga tidak dipakai di alur app. Aman diabaikan, tapi jangan bingung kalau nemu file-file ini — bukan berarti Vite aktif dipakai.
 
 ## Deploy
 
