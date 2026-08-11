@@ -52,6 +52,8 @@
                             <td>{{ $location->room_code ?? '-' }}</td>
                             <td>{{ $location->assets_count }}</td>
                             <td>
+                                <a href="{{ route('locations.dbr', $location->id) }}" target="_blank">Cetak DBR</a>
+                                &nbsp;·&nbsp;
                                 <a href="{{ route('locations.edit', $location->id) }}">Edit</a>
                                 &nbsp;·&nbsp;
                                 <form method="POST" action="{{ route('locations.destroy', $location->id) }}" style="display:inline" data-confirm="Yakin hapus lokasi {{ $location->name }}?">

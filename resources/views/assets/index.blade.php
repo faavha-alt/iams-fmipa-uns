@@ -52,37 +52,40 @@
         @if ($assets->count() === 0)
             <div class="empty-state">Belum ada aset yang cocok dengan pencarian ini.</div>
         @else
-            <table>
+            <div class="table-responsive">
+            <table class="table-assets">
                 <thead>
                     <tr>
-                        <th>Kode Aset</th>
-                        <th>Nama</th>
-                        <th>Kategori</th>
+                        <th class="col-name">Nama</th>
+                        <th class="col-brand">Merk</th>
+                        <th class="col-serial">Tipe/Seri</th>
+                        <th class="col-category">Kategori</th>
                         @if ($isAdmin)
-                            <th>Unit</th>
+                            <th class="col-unit">Unit</th>
                         @endif
-                        <th>Lokasi</th>
-                        <th>Kondisi</th>
-                        <th>Status</th>
+                        <th class="col-location">Lokasi</th>
+                        <th class="col-badge">Kondisi</th>
+                        <th class="col-badge">Status</th>
                         @if ($isAdmin)
-                            <th></th>
+                            <th class="col-actions"></th>
                         @endif
                     </tr>
                 </thead>
                 <tbody>
                     @foreach ($assets as $asset)
                         <tr>
-                            <td><span class="code-chip">{{ $asset->asset_code }}</span></td>
-                            <td>{{ $asset->name }}</td>
-                            <td>{{ $asset->category?->name ?? '-' }}</td>
+                            <td class="col-name">{{ $asset->name }}</td>
+                            <td class="col-brand">{{ $asset->brand ?? '-' }}</td>
+                            <td class="col-serial">{{ collect([$asset->model, $asset->serial_number])->filter()->implode(' / ') ?: '-' }}</td>
+                            <td class="col-category">{{ $asset->category?->name ?? '-' }}</td>
                             @if ($isAdmin)
-                                <td>{{ $asset->unit?->name ?? '-' }}</td>
+                                <td class="col-unit">{{ $asset->unit?->name ?? '-' }}</td>
                             @endif
-                            <td>{{ $asset->location?->name ?? '-' }}</td>
-                            <td><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
-                            <td>{{ str_replace('_', ' ', $asset->status) }}</td>
+                            <td class="col-location">{{ $asset->location?->name ?? '-' }}</td>
+                            <td class="col-badge"><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
+                            <td class="col-badge">{{ str_replace('_', ' ', $asset->status) }}</td>
                             @if ($isAdmin)
-                                <td>
+                                <td class="col-actions">
                                     <a href="{{ route('assets.edit', $asset->id) }}">Edit</a>
                                     &nbsp;·&nbsp;
                                     <form method="POST" action="{{ route('assets.destroy', $asset->id) }}"
@@ -97,6 +100,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             <div class="pagination">
                 {{ $assets->links() }}

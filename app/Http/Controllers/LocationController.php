@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Location;
+use App\Models\Setting;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LocationController extends Controller
 {
@@ -55,6 +57,32 @@ class LocationController extends Controller
         $location->update($this->validated($request));
 
         return redirect()->route('locations.index')->with('message', 'Data lokasi berhasil diperbarui.');
+    }
+
+    /**
+     * Daftar Barang Ruangan (DBR) — versi cetak untuk ditempel fisik di ruangan.
+     * QR code di lembar ini mengarah balik ke halaman ini juga, jadi discan kapan pun
+     * akan selalu nampilkan data aset terkini di ruangan itu (bukan data statis waktu cetak).
+     */
+    public function dbr(Location $location): View
+    {
+        $location->load('unit');
+        $assets = $location->assets()
+            ->with('category')
+            ->where('status', '!=', 'dihapuskan')
+            ->orderBy('name')
+            ->get();
+
+        $dbrUrl = route('locations.dbr', $location->id);
+
+        return view('locations.dbr', [
+            'location' => $location,
+            'assets' => $assets,
+            'qrSvg' => QrCode::size(130)->generate($dbrUrl),
+            'kopLogo' => Setting::get('bast_kop_logo'),
+            'kopBaris1' => Setting::get('bast_kop_baris1', 'Fakultas Matematika dan Ilmu Pengetahuan Alam'),
+            'kopBaris2' => Setting::get('bast_kop_baris2', 'Universitas Sebelas Maret'),
+        ]);
     }
 
     public function destroy(Location $location): RedirectResponse
