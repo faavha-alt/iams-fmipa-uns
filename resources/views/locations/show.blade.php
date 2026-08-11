@@ -136,15 +136,19 @@
         @if ($assets->count() === 0)
             <div class="empty-state">Tidak ada aset yang cocok dengan filter ini.</div>
         @else
-            <form method="POST" action="{{ route('assets.bulk-destroy') }}" data-confirm="Yakin hapus semua aset yang dicentang? Tindakan ini tidak bisa dibatalkan.">
+            <form method="POST" action="{{ route('assets.bulk-destroy') }}">
                 @csrf
-                @method('DELETE')
 
                 <div style="display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
                     <p style="font-size: 0.8rem; color: var(--muted); margin: 0;">
-                        Ketemu input dobel? Centang lalu hapus sekaligus — tidak perlu konfirmasi satu per satu.
+                        Centang aset yang mau diproses — cetak sticker atau hapus sekaligus, tidak perlu satu per satu.
                     </p>
-                    <button type="submit" class="btn btn-sm btn-danger">🗑 Hapus yang Dicentang</button>
+                    <div style="display:flex; gap:8px;">
+                        <button type="submit" formaction="{{ route('assets.stickers') }}" formtarget="_blank" class="btn btn-sm btn-outline">🏷 Cetak Sticker</button>
+                        <button type="submit" formaction="{{ route('assets.bulk-destroy') }}"
+                                onclick="return confirm('Yakin hapus semua aset yang dicentang? Tindakan ini tidak bisa dibatalkan.')"
+                                class="btn btn-sm btn-danger">🗑 Hapus yang Dicentang</button>
+                    </div>
                 </div>
                 @error('asset_ids') <div class="form-error" style="margin-bottom: 10px;">{{ $message }}</div> @enderror
 

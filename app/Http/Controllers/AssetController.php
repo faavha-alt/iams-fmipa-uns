@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Concerns\ImportsSpreadsheet;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AssetController extends Controller
 {
@@ -122,6 +123,39 @@ class AssetController extends Controller
         $count = Asset::whereIn('id', $data['asset_ids'])->delete();
 
         return redirect()->back()->with('message', "{$count} aset berhasil dihapus.");
+    }
+
+    /**
+     * Cetak sticker untuk aset yang dicentang — F4, ~20 sticker per halaman.
+     * QR di tiap sticker mengarah ke halaman publik aset itu (lihat publicInfo()).
+     */
+    public function stickers(Request $request): View
+    {
+        $this->authorizeAdmin();
+
+        $data = $request->validate([
+            'asset_ids' => 'required|array|min:1',
+            'asset_ids.*' => 'exists:assets,id',
+        ]);
+
+        $assets = Asset::whereIn('id', $data['asset_ids'])->orderBy('name')->get();
+
+        $items = $assets->map(fn (Asset $asset) => [
+            'asset' => $asset,
+            'qrSvg' => QrCode::size(72)->generate(route('assets.public-info', $asset->qr_code)),
+        ]);
+
+        return view('assets.stickers', ['items' => $items]);
+    }
+
+    /**
+     * Halaman publik (tanpa login) yang dibuka lewat scan QR code di sticker aset.
+     */
+    public function publicInfo(Asset $asset): View
+    {
+        $asset->load(['category', 'unit', 'location', 'vendor']);
+
+        return view('assets.public-info', ['asset' => $asset]);
     }
 
     public function importForm(): View
