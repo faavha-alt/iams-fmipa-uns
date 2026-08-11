@@ -73,7 +73,11 @@
                                     <span class="badge badge-diajukan">Draft</span>
                                 @endif
                             </td>
-                            <td><a href="{{ route('handover-reports.show', $report->id) }}">Lihat →</a></td>
+                            <td>
+                                <a href="{{ route('handover-reports.show', $report->id) }}" class="icon-btn" title="Lihat" aria-label="Lihat">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

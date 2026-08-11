@@ -52,15 +52,21 @@
                             <td>{{ $location->room_code ?? '-' }}</td>
                             <td>{{ $location->assets_count }}</td>
                             <td>
-                                <a href="{{ route('locations.show', $location->id) }}">Detail</a>
-                                &nbsp;·&nbsp;
-                                <a href="{{ route('locations.edit', $location->id) }}">Edit</a>
-                                &nbsp;·&nbsp;
-                                <form method="POST" action="{{ route('locations.destroy', $location->id) }}" style="display:inline" data-confirm="Yakin hapus lokasi {{ $location->name }}?">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="link-danger">Hapus</button>
-                                </form>
+                                <div class="row-actions">
+                                    <a href="{{ route('locations.show', $location->id) }}" class="icon-btn" title="Detail" aria-label="Detail">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
+                                    <a href="{{ route('locations.edit', $location->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    </a>
+                                    <form method="POST" action="{{ route('locations.destroy', $location->id) }}" style="display:inline" data-confirm="Yakin hapus lokasi {{ $location->name }}?">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="icon-btn icon-btn--danger" title="Hapus" aria-label="Hapus">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

@@ -220,13 +220,45 @@ a { color: var(--cerulean); }
 
 /* ===== Table ===== */
 
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead { background: #F8FAFC; }
-th, td { text-align: left; padding: 12px 15px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+thead th { background: #F8FAFC; }
+th, td { text-align: left; padding: 13px 16px; border-bottom: 1px solid rgba(15,23,42,0.06); }
 th { color: #94A3B8; font-weight: 700; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.06em; }
+thead th:first-child { border-top-left-radius: 10px; }
+thead th:last-child { border-top-right-radius: 10px; }
+tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover td { background: #F8FAFC; }
 td a { font-size: 12.5px; text-decoration: none; color: var(--cerulean); font-weight: 500; }
 td a:hover { text-decoration: underline; }
+
+/* ===== Row actions (tombol ikon di kolom aksi tabel) ===== */
+
+.row-actions { display: flex; align-items: center; gap: 3px; flex-wrap: nowrap; }
+.icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; border: none; padding: 0;
+    background: transparent; color: #94A3B8; cursor: pointer; transition: background 0.15s, color 0.15s;
+    text-decoration: none; flex-shrink: 0;
+}
+.icon-btn svg { width: 15px; height: 15px; display: block; }
+.icon-btn:hover { background: var(--sky-pale); color: var(--cerulean); }
+.icon-btn--danger:hover { background: var(--light-red); color: var(--red); }
+.icon-btn--ok:hover { background: var(--light-green); color: var(--green); }
+
+/* Aksi yang mengubah status (Aktifkan, Finalisasi, dll) — pil kecil berlabel,
+   supaya arah aksinya jelas dan tidak disamakan dengan Edit/Hapus biasa. */
+.action-pill {
+    display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--border);
+    background: white; font-size: 11px; font-weight: 600; text-decoration: none;
+    color: var(--ink); cursor: pointer; transition: all 0.15s; font-family: var(--font-body);
+}
+.action-pill svg { width: 12px; height: 12px; }
+.action-pill:hover { border-color: var(--cerulean); color: var(--cerulean); background: var(--sky-pale); }
+.action-pill--danger { color: var(--red); border-color: rgba(220,38,38,0.25); }
+.action-pill--danger:hover { background: var(--light-red); border-color: var(--red); color: var(--red); }
+.action-pill--ok { color: var(--green); border-color: rgba(5,150,105,0.25); }
+.action-pill--ok:hover { background: var(--light-green); border-color: var(--green); color: var(--green); }
 
 /* Bungkus tabel supaya di layar sempit scroll ke samping, bukan merusak layout halaman */
 .table-responsive { width: 100%; overflow-x: auto; }

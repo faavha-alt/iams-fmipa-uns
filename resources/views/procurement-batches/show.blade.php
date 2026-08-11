@@ -111,9 +111,15 @@
                             </td>
                             <td>
                                 @if ($item->status === 'belum_final')
-                                    <a href="{{ route('realizations.finalize-form', $item->id) }}">Finalisasi</a>
-                                    &nbsp;·&nbsp;
-                                    <a href="{{ route('realizations.edit', $item->id) }}">Edit</a>
+                                    <div class="row-actions">
+                                        <a href="{{ route('realizations.finalize-form', $item->id) }}" class="action-pill action-pill--ok" title="Finalisasi jadi Aset">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                            Finalisasi
+                                        </a>
+                                        <a href="{{ route('realizations.edit', $item->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                        </a>
+                                    </div>
                                 @else
                                     <span style="color: var(--muted); font-size: 0.8rem;">{{ $item->assets()->count() }} aset dibuat</span>
                                 @endif

@@ -54,16 +54,19 @@
                                 @endif
                             </td>
                             <td>
-                                <a href="{{ route('users.edit', $user->id) }}">Edit</a>
-                                @if ($user->id !== auth()->id())
-                                    &nbsp;·&nbsp;
-                                    <form method="POST" action="{{ route('users.toggle-active', $user->id) }}" style="display:inline">
-                                        @csrf
-                                        <button type="submit" class="link-danger" style="color: {{ $user->is_active ? 'var(--danger)' : 'var(--ok)' }};">
-                                            {{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
-                                        </button>
-                                    </form>
-                                @endif
+                                <div class="row-actions">
+                                    <a href="{{ route('users.edit', $user->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    </a>
+                                    @if ($user->id !== auth()->id())
+                                        <form method="POST" action="{{ route('users.toggle-active', $user->id) }}" style="display:inline">
+                                            @csrf
+                                            <button type="submit" class="action-pill {{ $user->is_active ? 'action-pill--danger' : 'action-pill--ok' }}">
+                                                {{ $user->is_active ? 'Nonaktifkan' : 'Aktifkan' }}
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @endforeach

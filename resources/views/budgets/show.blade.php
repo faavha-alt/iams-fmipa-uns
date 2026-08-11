@@ -56,7 +56,11 @@
                             <td>Rp {{ number_format($row['pagu'], 0, ',', '.') }}</td>
                             <td>Rp {{ number_format($row['realisasi'], 0, ',', '.') }}</td>
                             <td style="color: {{ $row['over_budget'] ? 'var(--danger)' : 'var(--ink)' }};">Rp {{ number_format($row['sisa'], 0, ',', '.') }}</td>
-                            <td><a href="{{ route('budgets.show', $row['unit']->id) }}?year={{ $year }}">Detail →</a></td>
+                            <td>
+                                <a href="{{ route('budgets.show', $row['unit']->id) }}?year={{ $year }}" class="icon-btn" title="Detail" aria-label="Detail">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </a>
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>
