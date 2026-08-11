@@ -1,0 +1,88 @@
+# IAMS FMIPA UNS — Integrated Asset Management System
+
+Sistem manajemen aset & pengadaan untuk Fakultas MIPA, Universitas Sebelas Maret.
+
+## Stack
+
+- **Laravel 13**, PHP 8.4+
+- **MySQL** (bukan SQLite — sudah dimigrasikan)
+- **Blade + vanilla JS** — TIDAK pakai Livewire (sempat dicoba, dilepas karena masalah asset-loading di shared hosting), TIDAK pakai Tailwind/Vite build step
+- **CSS custom** di `public/css/frontend.css` — tema cerulean blue (`#0E7DA7`) + gold (`#E9A828`), font Montserrat (judul) + Poppins (body)
+- **PhpSpreadsheet** — dipakai untuk import/export Excel (aset, kode BMN)
+- Hosting: shared hosting (panel "jogo-os"), akses via SSH
+
+## Deploy
+
+```powershell
+# Dari Windows, di folder project:
+.\deploy.ps1 "keterangan perubahan"
+```
+Ini otomatis: `git add` → `git commit` → `git push` → SSH ke server → `git pull` → `composer install` → `migrate` → clear cache.
+
+Kalau mau manual di server:
+```bash
+cd ~/htdocs/aset.mipa.uns.ac.id
+bash deploy.sh
+```
+
+**PENTING**: server pakai shared hosting dengan memory terbatas. Command composer/artisan yang berat kadang perlu `php -d memory_limit=-1`.
+
+## Arsitektur & Modul
+
+Tidak ada file routing terpisah per modul — semua di `routes/web.php`, dikelompokkan dalam middleware group `auth` dan `admin`.
+
+### Role & Akses
+- **admin**: akses penuh ke semua modul
+- **kepala_unit / staff**: pengaju dari unit masing-masing — cuma lihat data unit sendiri, bisa ajukan permintaan aset
+- Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`)
+
+### Modul yang sudah ada
+| Modul | Controller | Keterangan |
+|---|---|---|
+| Dashboard | `DashboardController` | Statistik ringkas, scoped per role |
+| Aset | `AssetController` | CRUD + import Excel massal |
+| Kategori Aset | `CategoryController` | Hierarkis (`parent_id`), ada `unit_satuan` |
+| Unit/Prodi | `UnitController` | Hierarkis, kode auto-generate |
+| Lokasi | `LocationController` | Terikat ke unit |
+| Vendor | `VendorController` | Soft delete |
+| Pengajuan Aset | `AssetRequestController` | Alur approve/reject dari pengaju ke admin, wajib upload gambar + link referensi |
+| **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. 1 Pengadaan = 1 vendor. |
+| **Barang Pengadaan** (`purchase_realizations`) | `RealizationController` | **Item di dalam Pengadaan** — WAJIB terikat ke satu `procurement_batch_id` (tidak boleh berdiri sendiri lagi). Finalisasi → jadi `Asset` resmi (kode + QR otomatis). |
+| Anggaran | `BudgetController` | 2 lapis: Fakultas (pagu total) → Prodi (alokasi). Realisasi dihitung dari `assets.acquisition_value` + `purchase_realizations` yang `belum_final` |
+| BAST | `HandoverReportController` | Berbasis **unit** (bukan per-realisasi) — bisa gabung banyak aset dari realisasi berbeda. Cetak F4, kop surat bisa upload gambar (di `/settings`) |
+| Kode BMN | `BmnCodeController` | Master kode+nama, dipakai di `<datalist>` form aset |
+| User | `UserController` | Soft-disable via `is_active`, bukan hard delete |
+| Pengaturan | `SettingController` | Key-value generic di tabel `settings`, dipakai untuk kop surat BAST |
+
+### Alur Bisnis Pengadaan (PENTING)
+Buat Pengadaan (pilih vendor, wajib)
+Tambah Barang ke Pengadaan itu (procurement_batch_id wajib diisi)
+Finalisasi barang → jadi Asset (kode & QR auto), vendor diambil dari Pengadaan induk
+Buat BAST per unit (bisa gabung aset dari beberapa Pengadaan sekaligus)
+
+Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari form, vendor cuma ada di level Pengadaan supaya tidak dobel.
+
+## Konvensi Kode
+
+- **Soft delete** dipakai di: `Unit`, `Location`, `AssetCategory`, `Vendor`, `BmnCodeReference` — supaya hapus dari UI tidak permanen. `Asset` juga soft delete.
+- **Kode otomatis**: `Asset::generateAssetCode()`, `Unit::generateCode()`, `HandoverReport::generateNomor()` — pola serupa, jangan bikin ulang, ikuti polanya kalau butuh kode baru di modul lain.
+- **Harga**: form selalu minta **harga satuan**, total dihitung otomatis (vanilla JS live preview + dihitung ulang di server saat validasi, jangan percaya angka dari client).
+- **File upload**: pakai `Storage::disk('public')`, butuh `php artisan storage:link` di server. Folder: `pengajuan/` (bukti pengajuan), `bast/` (scan BAST), `settings/` (kop surat).
+- **Import Excel**: pakai trait `App\Concerns\ImportsSpreadsheet` (baca xlsx/xls/csv otomatis lewat PhpSpreadsheet).
+- **Null-safe operator**: HATI-HATI kalau bikin form yang dipakai bareng create+edit (`$model` bisa `null` saat create) — pakai `$model?->relasi?->format(...)`, BUKAN `$model->relasi?->format(...)` (baru cukup error kalau `$model`-nya sendiri null).
+
+## Gotcha yang Sudah Pernah Kejadian (jangan diulang)
+
+- **MySQL reserved word**: kolom bernama `condition` harus di-quote (`->select('condition')` bukan `->selectRaw('condition, ...')` mentah).
+- **Laravel pagination default** pakai markup Tailwind (duplikasi mobile/desktop) — sudah diganti custom view `resources/views/vendor/pagination/custom.blade.php`, didaftarkan lewat `Paginator::defaultView()` di `AppServiceProvider`.
+- **Locale tanggal**: `config/app.php` / `.env` harus `APP_LOCALE=id` supaya `Carbon::translatedFormat()` keluar bahasa Indonesia.
+- **RedirectResponse tidak punya method `when()`** — itu method Query Builder/Collection, jangan dipakai di redirect chain.
+- **Hapus data via database langsung (phpMyAdmin) melewati semua safeguard aplikasi** (termasuk soft delete) — SELALU lewat halaman aplikasi, jangan pernah hapus manual di DB kecuali darurat.
+
+## Yang Belum Dikerjakan / Ide Lanjutan
+
+- Modul Penerimaan Barang (checklist fisik sebelum finalisasi)
+- Cetak dokumen pengadaan resmi (surat pesanan/kontrak) — field `nomor_dokumen` di `procurement_batches` sudah disiapkan buat ini
+- Role lebih granular (misal "admin_gudang" yang cuma bisa kelola aset, tidak bisa hapus permanen)
+- Foto aset (upload gambar per aset, belum ada)
+- Garansi aset (belum ada kolom)
