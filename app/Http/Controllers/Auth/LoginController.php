@@ -30,6 +30,16 @@ class LoginController extends Controller
                 ->onlyInput('email');
         }
 
+        $user = Auth::user();
+
+        if (! $user->is_active || ! $user->is_approved) {
+            Auth::logout();
+
+            return back()
+                ->withErrors(['email' => 'Akun Anda belum aktif. Hubungi admin.'])
+                ->onlyInput('email');
+        }
+
         $request->session()->regenerate();
 
         return redirect()->intended(route('assets.index'));

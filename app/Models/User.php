@@ -25,12 +25,14 @@ class User extends Authenticatable
     protected $fillable = [
     'name', 'email', 'password',
     'unit_id', 'role', 'nip', 'phone', 'is_active',
+    'google_id', 'is_approved',
 ];
 
 protected $casts = [
     'email_verified_at' => 'datetime',
     'password' => 'hashed',
     'is_active' => 'boolean',
+    'is_approved' => 'boolean',
 ];
 
 public function unit(): \Illuminate\Database\Eloquent\Relations\BelongsTo

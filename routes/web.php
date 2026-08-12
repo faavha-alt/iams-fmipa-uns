@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetRequestController;
@@ -20,6 +21,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [LoginController::class, 'show'])->name('login')->middleware('guest');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('login.authenticate')->middleware('guest');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout')->middleware('auth');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect'])->name('auth.google.redirect');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])->name('auth.google.callback');
+});
 
 // Halaman publik, tanpa login — dibuka dari hasil scan QR code DBR yang ditempel di ruangan.
 Route::get('/ruangan/{location}', [LocationController::class, 'publicInfo'])->name('locations.public-info');

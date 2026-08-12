@@ -62,6 +62,13 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 - **pimpinan**: ada di enum tapi belum ada logika/otorisasi khusus di kode — perlakuannya masih sama seperti non-admin biasa (perlu diperjelas kalau mau dipakai beneran)
 - Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`, cek `role === 'admin'`)
 
+### Login & Google OAuth
+- Dua cara login: email+password biasa (`LoginController`), atau **Masuk dengan Google** (`GoogleAuthController`, pakai `laravel/socialite`).
+- Google login pertama kali (email belum pernah ada di `users`) → bikin baris user baru dengan `role='staff'` placeholder, `is_approved=false`, TIDAK login otomatis — ditampilkan halaman `auth.pending`. Kalau email sudah ada (didaftarkan admin manual) → `google_id` ditautkan ke user itu.
+- `is_approved` (kolom baru, default `true`) beda makna dari `is_active`: `is_approved=false` = "belum di-approve admin" (khusus user baru dari Google), `is_active=false` = "sengaja dinonaktifkan admin". Keduanya di-cek di login (password maupun Google) — kalau salah satu `false`, tidak bisa masuk.
+- Approve user pending = admin buka `users.edit`, isi role+unit, simpan — `UserController::update` otomatis set `is_approved=true` saat itu (tidak ada tombol approve terpisah).
+- Butuh env var `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (OAuth client dari Google Cloud Console, authorized redirect URI = `https://aset.mipa.uns.ac.id/auth/google/callback`) — set manual di `.env` server, tidak ikut git.
+
 ### Modul yang sudah ada
 | Modul | Controller | Keterangan |
 |---|---|---|

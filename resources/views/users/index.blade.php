@@ -22,6 +22,10 @@
                 <option value="staff" @selected(request('role') == 'staff')>Staff</option>
                 <option value="pimpinan" @selected(request('role') == 'pimpinan')>Pimpinan</option>
             </select>
+            <select name="status" onchange="this.form.submit()">
+                <option value="">Semua Status</option>
+                <option value="pending" @selected(request('status') == 'pending')>Menunggu Persetujuan</option>
+            </select>
             <button type="submit" class="btn btn-outline btn-sm">Cari</button>
         </form>
 
@@ -47,7 +51,9 @@
                             <td><span class="role-tag role-tag--{{ $user->role }}" style="color: var(--ink); background: var(--neutral-soft);">{{ $user->role }}</span></td>
                             <td>{{ $user->unit?->name ?? '-' }}</td>
                             <td>
-                                @if ($user->is_active)
+                                @if (! $user->is_approved)
+                                    <span class="badge badge-rusak_ringan">Menunggu Persetujuan</span>
+                                @elseif ($user->is_active)
                                     <span class="badge badge-baik">Aktif</span>
                                 @else
                                     <span class="badge badge-hilang">Nonaktif</span>

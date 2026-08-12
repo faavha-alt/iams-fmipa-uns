@@ -23,6 +23,8 @@ class UserController extends Controller
                 });
             })
             ->when($request->filled('role'), fn ($q) => $q->where('role', $request->input('role')))
+            ->when($request->input('status') === 'pending', fn ($q) => $q->where('is_approved', false))
+            ->orderByRaw('is_approved asc')
             ->orderBy('name')
             ->paginate(15)
             ->appends($request->query());
@@ -78,6 +80,9 @@ class UserController extends Controller
         if (empty($data['password'])) {
             unset($data['password']);
         }
+
+        // Menyimpan role & unit lewat form ini adalah tindakan approve untuk user yang masuk lewat Google.
+        $data['is_approved'] = true;
 
         $user->update($data);
 
