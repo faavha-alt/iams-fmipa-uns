@@ -13,16 +13,39 @@ Sistem manajemen aset & pengadaan untuk Fakultas MIPA, Universitas Sebelas Maret
 
 ## Deploy
 
-**Belum ada script deploy otomatis** (`deploy.ps1`/`deploy.sh` sempat didokumentasikan di sini tapi ternyata belum pernah dibuat — kalau mau dibuat, alurnya: `git add` → `git commit` → `git push` lokal → SSH ke server → `git pull` → `composer install` → `migrate` → clear cache). Untuk sekarang, deploy manual:
+Ada `deploy.sh` di root repo — commit & push perubahan seperti biasa, lalu jalankan (lewat Git Bash di Windows):
+
+```bash
+./deploy.sh      # minta konfirmasi sebelum migrate di server
+./deploy.sh -y   # skip konfirmasi
+```
+
+Script ini otomatis: cek working tree bersih & di branch `main` → `git push origin main` → SSH ke server (alias `iams-fmipa`) → `git pull` → `composer install` → `migrate --force` → clear cache. Kalau butuh deploy manual (misal komposer gagal di tengah jalan):
 
 ```bash
 ssh iams-fmipa   # alias SSH, lihat ~/.ssh/config
 cd ~/htdocs/aset.mipa.uns.ac.id
 git pull
-composer install --no-dev
+COMPOSER_MEMORY_LIMIT=-1 composer install --no-dev
 php artisan migrate --force
 php artisan config:clear && php artisan cache:clear && php artisan view:clear
 ```
+
+### Konek dari PC/laptop lain (kantor, rumah, dst.)
+
+Alias `iams-fmipa` cuma ada di `~/.ssh/config` per-mesin — tiap mesin baru harus disetel ulang:
+
+1. Generate keypair baru di mesin itu: `ssh-keygen -t ed25519 -C "nama@device"` (jangan pakai satu private key yang sama di banyak mesin — kalau satu laptop hilang, cukup cabut satu key di server, bukan revoke ganti-ganti semua device).
+2. Tambahkan blok ini ke `~/.ssh/config` mesin itu:
+   ```
+   Host iams-fmipa
+     HostName 203.6.149.150
+     Port 1103
+     User aset
+     IdentityFile ~/.ssh/id_ed25519
+   ```
+3. Daftarkan public key baru ke server (butuh password sekali): `ssh-copy-id -p 1103 aset@203.6.149.150`, atau kalau tidak ada `ssh-copy-id`, login manual (PuTTY dsb.) lalu `echo "<isi .pub>" >> ~/.ssh/authorized_keys`.
+4. Tes: `ssh iams-fmipa`. Setelah itu `./deploy.sh` langsung bisa jalan dari mesin itu.
 
 **PENTING**: server pakai shared hosting dengan memory terbatas. Command composer/artisan yang berat kadang perlu `php -d memory_limit=-1`.
 
