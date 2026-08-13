@@ -114,6 +114,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/bmn-codes/import/template', [BmnCodeController::class, 'downloadTemplate'])->name('bmn-codes.import.template');
         Route::post('/bmn-codes/import', [BmnCodeController::class, 'import'])->name('bmn-codes.import.process');
         Route::get('/bmn-codes/{bmnCode}/edit', [BmnCodeController::class, 'edit'])->name('bmn-codes.edit');
+        Route::get('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'show'])->name('bmn-codes.show');
         Route::put('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'update'])->name('bmn-codes.update');
         Route::delete('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'destroy'])->name('bmn-codes.destroy');
 
