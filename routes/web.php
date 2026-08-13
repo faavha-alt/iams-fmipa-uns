@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/units/create', [UnitController::class, 'create'])->name('units.create');
         Route::post('/units', [UnitController::class, 'store'])->name('units.store');
         Route::get('/units/{unit}/edit', [UnitController::class, 'edit'])->name('units.edit');
+        Route::get('/units/{unit}', [UnitController::class, 'show'])->name('units.show');
         Route::put('/units/{unit}', [UnitController::class, 'update'])->name('units.update');
         Route::post('/units/{unit}/toggle-active', [UnitController::class, 'toggleActive'])->name('units.toggle-active');
         Route::delete('/units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');

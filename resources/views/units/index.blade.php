@@ -49,12 +49,18 @@
                 <tbody>
                     @foreach ($units as $unit)
                         <tr>
-                            <td><span class="code-chip">{{ $unit->code }}</span></td>
-                            <td>{{ $unit->name }}</td>
+                            <td><a href="{{ route('units.show', $unit->id) }}"><span class="code-chip">{{ $unit->code }}</span></a></td>
+                            <td><a href="{{ route('units.show', $unit->id) }}" style="color: var(--ink); text-decoration: none; font-weight: 500;">{{ $unit->name }}</a></td>
                             <td>{{ str_replace('_', ' ', $unit->type) }}</td>
                             <td>{{ $unit->parent?->name ?? '-' }}</td>
                             <td>{{ $unit->head?->name ?? '-' }}</td>
-                            <td>{{ $unit->assets_count }}</td>
+                            <td>
+                                @if ($unit->assets_count > 0)
+                                    <a href="{{ route('units.show', $unit->id) }}" class="badge badge-baik">{{ $unit->assets_count }} aset</a>
+                                @else
+                                    <span class="badge badge-hilang">0 aset</span>
+                                @endif
+                            </td>
                             <td>
                                 @if ($unit->is_active)
                                     <span class="badge badge-baik">Aktif</span>
@@ -64,6 +70,9 @@
                             </td>
                             <td>
                                 <div class="row-actions">
+                                    <a href="{{ route('units.show', $unit->id) }}" class="icon-btn" title="Lihat Detail" aria-label="Lihat Detail">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
                                     <a href="{{ route('units.edit', $unit->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     </a>
