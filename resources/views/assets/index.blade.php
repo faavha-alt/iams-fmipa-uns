@@ -15,6 +15,68 @@
         <div class="alert-success">{{ session('message') }}</div>
     @endif
 
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--accent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="7" width="18" height="13" rx="1.5"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <div class="stat-card__value">{{ number_format($totalAssets) }}</div>
+            <div class="stat-card__label">Total Aset</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--ok">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v20M2 12h20" stroke-linecap="round"/></svg>
+            </div>
+            <div class="stat-card__value">Rp {{ number_format($totalValue, 0, ',', '.') }}</div>
+            <div class="stat-card__label">Nilai Perolehan</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--accent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9"/></svg>
+            </div>
+            <div class="stat-card__value">{{ $goodConditionPercent }}%</div>
+            <div class="stat-card__label">Kondisi Baik</div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-card__icon stat-card__icon--warn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 8v5" stroke-linecap="round"/><circle cx="12" cy="16.5" r="0.5" fill="currentColor"/><path d="M10.3 3.9 2.5 17.5A1.8 1.8 0 0 0 4 20.2h16a1.8 1.8 0 0 0 1.5-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>
+            </div>
+            <div class="stat-card__value">{{ $needsAttentionCount }}</div>
+            <div class="stat-card__label">Perlu Perhatian</div>
+        </div>
+    </div>
+
+    <div class="dash-columns">
+        <div class="card">
+            <div class="card__header"><h2 class="card__title">Kondisi Aset</h2></div>
+            @foreach ($conditions as $row)
+                <div class="bar-row">
+                    <span class="bar-row__label">{{ str_replace('_', ' ', $row['key']) }}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill badge-{{ $row['key'] }}-bar" style="width: {{ $row['percent'] }}%"></div>
+                    </div>
+                    <span class="bar-row__value">{{ $row['total'] }}</span>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="card">
+            <div class="card__header"><h2 class="card__title">Status Pemakaian</h2></div>
+            @foreach ($statuses as $row)
+                <div class="bar-row">
+                    <span class="bar-row__label">{{ str_replace('_', ' ', $row['key']) }}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill bar-fill--neutral" style="width: {{ $row['percent'] }}%"></div>
+                    </div>
+                    <span class="bar-row__value">{{ $row['total'] }}</span>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     <div class="card">
         <form method="GET" action="{{ route('assets.index') }}" class="filters">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama, kode aset, no. seri...">
@@ -83,7 +145,7 @@
                             @endif
                             <td class="col-location">{{ $asset->location?->name ?? '-' }}</td>
                             <td class="col-badge"><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
-                            <td class="col-badge">{{ str_replace('_', ' ', $asset->status) }}</td>
+                            <td class="col-badge"><span class="badge badge-{{ $asset->status }}">{{ str_replace('_', ' ', $asset->status) }}</span></td>
                             @if ($isAdmin)
                                 <td class="col-actions">
                                     <div class="row-actions">
