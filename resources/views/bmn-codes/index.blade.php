@@ -1,4 +1,12 @@
 <x-layouts.app>
+    @php
+        $sortLink = fn ($col) => route('bmn-codes.index').'?'.http_build_query(array_merge(
+            request()->except(['sort', 'direction', 'page']),
+            ['sort' => $col, 'direction' => $sort === $col && $direction === 'asc' ? 'desc' : 'asc']
+        ));
+        $sortIcon = fn ($col) => $sort !== $col ? '' : ($direction === 'asc' ? '▲' : '▼');
+    @endphp
+
     <div class="page-header">
         <div>
             <div class="page-header__eyebrow">Master Data</div>
@@ -52,6 +60,8 @@
     <div class="card">
         <form method="GET" action="{{ route('bmn-codes.index') }}" class="filters">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari kode atau nama barang...">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+            <input type="hidden" name="direction" value="{{ $direction }}">
             <button type="submit" class="btn btn-outline btn-sm">Cari</button>
         </form>
 
@@ -61,9 +71,9 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Kode</th>
-                        <th>Nama Barang</th>
-                        <th>Jumlah Aset</th>
+                        <th><a href="{{ $sortLink('kode') }}" class="sort-link">Kode {{ $sortIcon('kode') }}</a></th>
+                        <th><a href="{{ $sortLink('nama') }}" class="sort-link">Nama Barang {{ $sortIcon('nama') }}</a></th>
+                        <th><a href="{{ $sortLink('assets_count') }}" class="sort-link">Jumlah Aset {{ $sortIcon('assets_count') }}</a></th>
                         <th></th>
                     </tr>
                 </thead>
@@ -71,7 +81,7 @@
                     @foreach ($codes as $code)
                         <tr>
                             <td><a href="{{ route('bmn-codes.show', $code->id) }}"><span class="code-chip">{{ $code->kode }}</span></a></td>
-                            <td><a href="{{ route('bmn-codes.show', $code->id) }}" style="color: var(--ink); text-decoration: none; font-weight: 500;">{{ $code->nama }}</a></td>
+                            <td><a href="{{ route('bmn-codes.show', $code->id) }}" style="color: var(--ink); text-decoration: none; font-weight: 500; text-transform: uppercase;">{{ $code->nama }}</a></td>
                             <td>
                                 @if ($code->assets_count > 0)
                                     <a href="{{ route('bmn-codes.show', $code->id) }}" class="badge badge-baik">{{ $code->assets_count }} aset</a>

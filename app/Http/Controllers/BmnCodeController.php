@@ -18,6 +18,15 @@ class BmnCodeController extends Controller
 
     public function index(Request $request): View
     {
+        // Kolom yang boleh dipakai sorting, dipetakan ke nama kolom SQL supaya tidak bisa disuntik lewat query string.
+        $sortColumns = [
+            'kode' => 'kode',
+            'nama' => 'nama',
+            'assets_count' => 'assets_count',
+        ];
+        $sort = array_key_exists($request->input('sort'), $sortColumns) ? $request->input('sort') : 'assets_count';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
         $codes = BmnCodeReference::query()
             ->withCount('assets')
             ->when($request->filled('search'), function ($q) use ($request) {
@@ -27,7 +36,7 @@ class BmnCodeController extends Controller
                         ->orWhere('nama', 'like', "%{$search}%");
                 });
             })
-            ->orderBy('kode')
+            ->orderBy($sortColumns[$sort], $direction)
             ->paginate(20)
             ->appends($request->query());
 
@@ -45,6 +54,8 @@ class BmnCodeController extends Controller
             'codesInUse' => $codesInUse,
             'assetsWithCode' => $assetsWithCode,
             'assetsWithoutCode' => $assetsWithoutCode,
+            'sort' => $sort,
+            'direction' => $direction,
         ]);
     }
 
