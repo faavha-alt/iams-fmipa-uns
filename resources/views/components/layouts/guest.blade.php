@@ -15,6 +15,31 @@
             <span class="guest-mark__code">FMIPA-2026</span>
             <h1>IAMS</h1>
             <p>Integrated Asset Management System — Fakultas MIPA, Universitas Sebelas Maret</p>
+
+            <div class="guest-stats">
+                <div class="guest-stat">
+                    <div class="guest-stat__value">{{ number_format($publicStats['totalAssets']) }}</div>
+                    <div class="guest-stat__label">Aset Terdata</div>
+                </div>
+                <div class="guest-stat">
+                    <div class="guest-stat__value">{{ number_format($publicStats['totalUnits']) }}</div>
+                    <div class="guest-stat__label">Unit / Prodi</div>
+                </div>
+                <div class="guest-stat">
+                    <div class="guest-stat__value">{{ number_format($publicStats['totalLocations']) }}</div>
+                    <div class="guest-stat__label">Lokasi Terdata</div>
+                </div>
+                <div class="guest-stat">
+                    <div class="guest-stat__value">{{ number_format($publicStats['totalCategories']) }}</div>
+                    <div class="guest-stat__label">Kategori Aset</div>
+                </div>
+                <div class="guest-stat guest-stat--wide">
+                    <div class="guest-stat__value">{{ $publicStats['goodConditionPercent'] }}%</div>
+                    <div class="guest-stat__label">Aset dalam Kondisi Baik</div>
+                </div>
+            </div>
+
+            <p class="guest-mark__updated">Data per {{ now()->translatedFormat('d F Y') }}</p>
         </div>
 
         <div class="guest-panel">
