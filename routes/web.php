@@ -2,10 +2,12 @@
 
 use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AssetRequestController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PublicController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\RealizationController;
@@ -32,8 +34,14 @@ Route::get('/ruangan/{location}', [LocationController::class, 'publicInfo'])->na
 // Halaman publik, tanpa login — dibuka dari hasil scan QR code di sticker aset. Dikunci lewat qr_code (bukan id) biar tidak gampang ditebak.
 Route::get('/aset/{asset:qr_code}', [AssetController::class, 'publicInfo'])->name('assets.public-info');
 
+// Situs publik (beranda, pengumuman, dokumentasi) — tanpa login, ini yang dilihat pengunjung
+// pertama kali. Login dipindah ke /login sendiri, bukan lagi di halaman depan "/".
+Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/dokumentasi', [PublicController::class, 'documentation'])->name('documentation');
+Route::get('/pengumuman', [AnnouncementController::class, 'publicIndex'])->name('announcements.public-index');
+Route::get('/pengumuman/{announcement}', [AnnouncementController::class, 'publicShow'])->name('announcements.public-show');
+
 Route::middleware('auth')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/assets', [AssetController::class, 'index'])->name('assets.index');
@@ -132,6 +140,14 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+        Route::get('/announcements/create', [AnnouncementController::class, 'create'])->name('announcements.create');
+        Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
+        Route::get('/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])->name('announcements.edit');
+        Route::put('/announcements/{announcement}', [AnnouncementController::class, 'update'])->name('announcements.update');
+        Route::post('/announcements/{announcement}/toggle-published', [AnnouncementController::class, 'togglePublished'])->name('announcements.toggle-published');
+        Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
 
         Route::get('/procurement-batches', [ProcurementBatchController::class, 'index'])->name('procurement-batches.index');
         Route::get('/procurement-batches/create', [ProcurementBatchController::class, 'create'])->name('procurement-batches.create');

@@ -62,6 +62,11 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 - **pimpinan**: ada di enum tapi belum ada logika/otorisasi khusus di kode — perlakuannya masih sama seperti non-admin biasa (perlu diperjelas kalau mau dipakai beneran)
 - Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`, cek `role === 'admin'`)
 
+### Situs Publik vs Aplikasi (login)
+- `/` (nama rute `home`) adalah **halaman depan publik** — beranda informatif (statistik ringkas tanpa nilai rupiah, pengumuman terbaru, link dokumentasi), TIDAK butuh login, di-handle `PublicController`. Login **bukan** lagi di `/`, tapi di `/login` sendiri (link "Masuk" di navbar situs publik).
+- Tiga layout Blade berbeda, jangan ketuker: `x-layouts.app` (shell+sidebar, buat halaman setelah login), `x-layouts.guest` (split-screen branding+form, cuma buat `auth.login` & `auth.pending`), `x-layouts.public` (navbar Beranda/Pengumuman/Dokumentasi + footer, buat `PublicController` & `AnnouncementController@public*`).
+- Rute publik situs (di luar grup `auth`, didefinisikan di atas grup itu di `routes/web.php`): `/` (beranda), `/dokumentasi` (masih placeholder "segera hadir"), `/pengumuman` + `/pengumuman/{announcement}` (daftar & detail, cuma yang `is_published=true`).
+
 ### Login & Google OAuth
 - Dua cara login: email+password biasa (`LoginController`), atau **Masuk dengan Google** (`GoogleAuthController`, pakai `laravel/socialite`).
 - Google login pertama kali (email belum pernah ada di `users`) → bikin baris user baru dengan `role='staff'` placeholder, `is_approved=false`, TIDAK login otomatis — ditampilkan halaman `auth.pending`. Kalau email sudah ada (didaftarkan admin manual) → `google_id` ditautkan ke user itu.
@@ -86,6 +91,7 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 | Kode BMN | `BmnCodeController` | Master kode+nama, dipakai di `<datalist>` form aset |
 | User | `UserController` | Soft-disable via `is_active`, bukan hard delete |
 | Pengaturan | `SettingController` | Key-value generic di tabel `settings`, dipakai untuk kop surat BAST |
+| Pengumuman | `AnnouncementController` | CRUD admin (`is_published` toggle, soft delete) + tampil di halaman depan publik & `/pengumuman`. Tidak ada editor rich-text — isi apa adanya (`white-space: pre-line` di tampilan), ganti baris di textarea langsung kepakai. |
 
 ### Alur Bisnis Pengadaan (PENTING)
 Buat Pengadaan (pilih vendor, wajib)
@@ -121,3 +127,4 @@ Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari for
 - Role lebih granular (misal "admin_gudang" yang cuma bisa kelola aset, tidak bisa hapus permanen)
 - Foto aset (upload gambar per aset, belum ada)
 - Garansi aset (belum ada kolom)
+- Isi konten halaman `/dokumentasi` (masih placeholder "segera hadir", belum ada panduan per-role beneran)
