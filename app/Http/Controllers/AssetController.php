@@ -11,6 +11,9 @@ use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Concerns\ImportsSpreadsheet;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -233,7 +236,12 @@ class AssetController extends Controller
         return response()->download($tempPath, 'template_import_aset.xlsx')->deleteFileAfterSend(true);
     }
 
-    public function import(Request $request): RedirectResponse
+    /**
+     * Langkah 1: baca file, validasi tiap baris, cocokkan nama vendor ke master (exact/mirip/baru),
+     * lalu simpan hasilnya di Cache (belum masuk DB) supaya admin bisa kroscek dulu di halaman preview
+     * sebelum benar-benar disimpan lewat confirmImport().
+     */
+    public function preview(Request $request): View|RedirectResponse
     {
         $this->authorizeAdmin();
 
@@ -242,44 +250,92 @@ class AssetController extends Controller
         $rows = $this->readSpreadsheetRows($request->file('file')->getRealPath());
         $header = array_map(fn ($h) => trim((string) $h), array_shift($rows));
 
-        $success = 0;
-        $failed = [];
+        $existingVendors = Vendor::orderBy('name')->get();
+        $vendorIndexByKey = [];
+        $vendors = [];
+        $parsedRows = [];
 
         foreach ($rows as $i => $row) {
+            $rowNumber = $i + 2;
+
             if (count(array_filter($row)) === 0) {
                 continue; // baris kosong
             }
 
             if (count($row) < count($header)) {
-                $failed[] = 'Baris '.($i + 2).': jumlah kolom tidak sesuai template.';
+                $parsedRows[] = [
+                    'row_number' => $rowNumber,
+                    'status' => 'error',
+                    'errors' => ['Jumlah kolom tidak sesuai template.'],
+                    'display' => [],
+                    'resolved' => null,
+                ];
                 continue;
             }
 
             $data = array_combine($header, $row);
             $data = array_map(fn ($v) => trim((string) ($v ?? '')), $data);
 
+            $errors = [];
             $category = AssetCategory::where('code', $data['kategori_kode'] ?? '')->first();
             $unit = Unit::where('code', $data['unit_kode'] ?? '')->first();
 
+            if (empty($data['nama_aset'])) {
+                $errors[] = 'Nama aset kosong.';
+            }
             if (! $category) {
-                $failed[] = 'Baris '.($i + 2).": kode kategori '{$data['kategori_kode']}' tidak ditemukan.";
-                continue;
+                $errors[] = "Kode kategori '{$data['kategori_kode']}' tidak ditemukan.";
             }
             if (! $unit) {
-                $failed[] = 'Baris '.($i + 2).": kode unit '{$data['unit_kode']}' tidak ditemukan.";
-                continue;
+                $errors[] = "Kode unit '{$data['unit_kode']}' tidak ditemukan.";
             }
 
-            $location = ! empty($data['lokasi_nama'])
+            $location = ($unit && ! empty($data['lokasi_nama']))
                 ? Location::where('name', $data['lokasi_nama'])->where('unit_id', $unit->id)->first()
                 : null;
 
-            $vendor = ! empty($data['vendor_nama'])
-                ? Vendor::firstOrCreate(['name' => $data['vendor_nama']])
-                : null;
+            $vendorRawName = trim($data['vendor_nama'] ?? '');
+            $vendorIndex = null;
+            if ($vendorRawName !== '') {
+                $key = $this->normalizeVendorName($vendorRawName);
+                if (! isset($vendorIndexByKey[$key])) {
+                    $vendors[] = $this->matchVendor($vendorRawName, $existingVendors);
+                    $vendorIndexByKey[$key] = count($vendors) - 1;
+                }
+                $vendorIndex = $vendorIndexByKey[$key];
+            }
 
-            try {
-                Asset::create([
+            $display = [
+                'nama_aset' => $data['nama_aset'] ?? '',
+                'kategori' => $category?->name ?? ($data['kategori_kode'] ?: '-'),
+                'unit' => $unit?->name ?? ($data['unit_kode'] ?: '-'),
+                'lokasi' => $location?->name ?? (! empty($data['lokasi_nama']) ? $data['lokasi_nama'].' (belum terdaftar → dikosongkan)' : '-'),
+                'merk' => $data['merk'] ?: '-',
+                'model' => $data['model'] ?: '-',
+                'tanggal_perolehan' => $data['tanggal_perolehan'] ?: '-',
+                'nilai_perolehan' => $data['nilai_perolehan'] ?: '-',
+                'kondisi' => $data['kondisi'] ?: '-',
+                'status_aset' => $data['status'] ?: '-',
+                'vendor_nama' => $vendorRawName !== '' ? $vendorRawName : '-',
+            ];
+
+            if (! empty($errors)) {
+                $parsedRows[] = [
+                    'row_number' => $rowNumber,
+                    'status' => 'error',
+                    'errors' => $errors,
+                    'display' => $display,
+                    'resolved' => null,
+                ];
+                continue;
+            }
+
+            $parsedRows[] = [
+                'row_number' => $rowNumber,
+                'status' => 'ok',
+                'errors' => [],
+                'display' => $display,
+                'resolved' => [
                     'name' => $data['nama_aset'],
                     'brand' => $data['merk'] ?: null,
                     'model' => $data['model'] ?: null,
@@ -287,7 +343,6 @@ class AssetController extends Controller
                     'asset_category_id' => $category->id,
                     'unit_id' => $unit->id,
                     'location_id' => $location?->id,
-                    'vendor_id' => $vendor?->id,
                     'acquisition_date' => $data['tanggal_perolehan'] ?: null,
                     'acquisition_source' => in_array($data['sumber_perolehan'], ['pengadaan', 'hibah', 'bantuan', 'lainnya']) ? $data['sumber_perolehan'] : 'pengadaan',
                     'acquisition_value' => is_numeric($data['nilai_perolehan']) ? $data['nilai_perolehan'] : 0,
@@ -295,12 +350,90 @@ class AssetController extends Controller
                     'status' => in_array($data['status'], ['aktif', 'dalam_perbaikan', 'dipinjamkan', 'dihapuskan']) ? $data['status'] : 'aktif',
                     'simak_kode_barang' => $data['kode_barang_simak'] ?: null,
                     'simak_nup' => is_numeric($data['nomor_urut_simak'] ?? null) ? $data['nomor_urut_simak'] : null,
-                ]);
+                    'vendor_index' => $vendorIndex,
+                ],
+            ];
+        }
+
+        if (empty($parsedRows)) {
+            return redirect()->route('assets.import')
+                ->withErrors(['file' => 'File kosong atau tidak ada baris data yang bisa dibaca.']);
+        }
+
+        $token = (string) Str::uuid();
+        Cache::put("asset_import:{$token}", [
+            'created_by' => auth()->id(),
+            'rows' => $parsedRows,
+            'vendors' => $vendors,
+        ], now()->addMinutes(30));
+
+        return view('assets.import-preview', [
+            'token' => $token,
+            'rows' => $parsedRows,
+            'vendors' => $vendors,
+            'okCount' => count(array_filter($parsedRows, fn ($r) => $r['status'] === 'ok')),
+            'errorCount' => count(array_filter($parsedRows, fn ($r) => $r['status'] === 'error')),
+        ]);
+    }
+
+    /**
+     * Langkah 2: eksekusi ke database setelah admin kroscek di halaman preview. Vendor yang
+     * ambigu/baru dieksekusi sesuai pilihan admin di form (vendor_decisions), baru row dieksekusi.
+     */
+    public function confirmImport(Request $request): RedirectResponse
+    {
+        $this->authorizeAdmin();
+
+        $data = $request->validate([
+            'token' => 'required|string',
+            'vendor_decisions' => 'nullable|array',
+        ]);
+
+        $payload = Cache::get("asset_import:{$data['token']}");
+
+        if (! $payload || $payload['created_by'] !== auth()->id()) {
+            return redirect()->route('assets.import')
+                ->with('message', 'Sesi preview sudah kedaluwarsa atau tidak valid — silakan upload ulang.');
+        }
+
+        $decisions = $data['vendor_decisions'] ?? [];
+
+        $vendorIdByIndex = [];
+        foreach ($payload['vendors'] as $index => $vendor) {
+            if ($vendor['status'] === 'matched') {
+                $vendorIdByIndex[$index] = $vendor['vendor_id'];
+                continue;
+            }
+
+            $decision = $decisions[$index] ?? 'new';
+            $vendorIdByIndex[$index] = str_starts_with($decision, 'existing:')
+                ? (int) substr($decision, 9)
+                : Vendor::firstOrCreate(['name' => $vendor['name']])->id;
+        }
+
+        $success = 0;
+        $failed = [];
+
+        foreach ($payload['rows'] as $row) {
+            if ($row['status'] !== 'ok') {
+                $failed[] = "Baris {$row['row_number']}: ".implode('; ', $row['errors']);
+                continue;
+            }
+
+            $resolved = $row['resolved'];
+            $vendorIndex = $resolved['vendor_index'];
+            unset($resolved['vendor_index']);
+            $resolved['vendor_id'] = $vendorIndex !== null ? ($vendorIdByIndex[$vendorIndex] ?? null) : null;
+
+            try {
+                Asset::create($resolved);
                 $success++;
             } catch (\Exception $e) {
-                $failed[] = 'Baris '.($i + 2).': '.$e->getMessage();
+                $failed[] = "Baris {$row['row_number']}: ".$e->getMessage();
             }
         }
+
+        Cache::forget("asset_import:{$data['token']}");
 
         $message = "{$success} aset berhasil diimport.";
         if (count($failed) > 0) {
@@ -310,6 +443,48 @@ class AssetController extends Controller
         return redirect()->route('assets.index')
             ->with('message', $message)
             ->with('importErrors', $failed);
+    }
+
+    /**
+     * Cocokkan nama vendor dari file import ke master vendor: exact match (setelah normalisasi
+     * tanda baca/spasi) langsung dipakai, mirip (>=70%) butuh konfirmasi admin, sama sekali baru
+     * ditandai buat dibuatkan otomatis. Ini mencegah duplikat vendor gara-gara beda penulisan
+     * (mis. "CV Risc" vs "CV. RISC Computer") yang sebelumnya lolos begitu saja lewat firstOrCreate().
+     */
+    private function matchVendor(string $rawName, Collection $existingVendors): array
+    {
+        $normalized = $this->normalizeVendorName($rawName);
+
+        $exact = $existingVendors->first(fn (Vendor $v) => $this->normalizeVendorName($v->name) === $normalized);
+        if ($exact) {
+            return ['name' => $rawName, 'status' => 'matched', 'vendor_id' => $exact->id];
+        }
+
+        $candidates = $existingVendors
+            ->map(function (Vendor $v) use ($normalized) {
+                similar_text($normalized, $this->normalizeVendorName($v->name), $percent);
+
+                return ['id' => $v->id, 'name' => $v->name, 'percent' => round($percent, 1)];
+            })
+            ->filter(fn ($c) => $c['percent'] >= 70)
+            ->sortByDesc('percent')
+            ->take(3)
+            ->values()
+            ->all();
+
+        if (! empty($candidates)) {
+            return ['name' => $rawName, 'status' => 'ambiguous', 'candidates' => $candidates];
+        }
+
+        return ['name' => $rawName, 'status' => 'new'];
+    }
+
+    private function normalizeVendorName(string $name): string
+    {
+        $name = mb_strtoupper(trim($name));
+        $name = preg_replace('/[.,]/', '', $name);
+
+        return preg_replace('/\s+/', ' ', $name);
     }
 
     private function authorizeAdmin(): void

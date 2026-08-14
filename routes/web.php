@@ -45,7 +45,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/assets/create', [AssetController::class, 'create'])->name('assets.create');
         Route::get('/assets/import', [AssetController::class, 'importForm'])->name('assets.import');
         Route::get('/assets/import/template', [AssetController::class, 'downloadTemplate'])->name('assets.import.template');
-        Route::post('/assets/import', [AssetController::class, 'import'])->name('assets.import.process');
+        Route::post('/assets/import', [AssetController::class, 'preview'])->name('assets.import.process');
+        Route::post('/assets/import/confirm', [AssetController::class, 'confirmImport'])->name('assets.import.confirm');
         Route::post('/assets', [AssetController::class, 'store'])->name('assets.store');
         Route::get('/assets/{asset}/edit', [AssetController::class, 'edit'])->name('assets.edit');
         Route::put('/assets/{asset}', [AssetController::class, 'update'])->name('assets.update');

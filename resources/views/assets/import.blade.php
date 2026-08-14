@@ -15,48 +15,53 @@
         </p>
         <a href="{{ route('assets.import.template') }}" class="btn">⬇ Download Template CSV</a>
 
-        <div style="margin-top: 20px;">
-            <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Kode kategori yang tersedia:</p>
-            <p style="font-size: 0.8rem; color: var(--muted);">
-                @foreach ($categories as $c)
-                    <span class="code-chip" style="margin: 2px;">{{ $c->code }}</span> {{ $c->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
-                @endforeach
-            </p>
-        </div>
-        <div style="margin-top: 14px;">
-            <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Kode unit yang tersedia:</p>
-            <p style="font-size: 0.8rem; color: var(--muted);">
-                @foreach ($units as $u)
-                    <span class="code-chip" style="margin: 2px;">{{ $u->code }}</span> {{ $u->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
-                @endforeach
-            </p>
-        </div>
-        <div style="margin-top: 14px;">
-            <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Nama lokasi yang tersedia (isi persis sama di kolom lokasi_nama, harus sesuai unitnya):</p>
-            @forelse ($locationsByUnit as $unitName => $locs)
-                <p style="font-size: 0.8rem; margin-bottom: 4px;">
-                    <strong>{{ $unitName }}:</strong>
-                    <span style="color: var(--muted);">
-                        @foreach ($locs as $loc)
-                            {{ $loc->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
+        <details class="review-panel" style="margin-top: 18px;">
+            <summary>Lihat kode kategori, unit, lokasi & vendor yang tersedia</summary>
+            <div class="review-panel__body">
+                <div>
+                    <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Kode kategori:</p>
+                    <p style="font-size: 0.8rem; color: var(--muted);">
+                        @foreach ($categories as $c)
+                            <span class="code-chip" style="margin: 2px;">{{ $c->code }}</span> {{ $c->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
                         @endforeach
-                    </span>
-                </p>
-            @empty
-                <p style="font-size: 0.8rem; color: var(--muted);">Belum ada lokasi terdaftar — <a href="{{ route('locations.create') }}" target="_blank">tambah dulu di sini</a>.</p>
-            @endforelse
-        </div>
-
-        <div style="margin-top: 14px;">
-            <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Nama vendor yang tersedia (isi persis sama di kolom vendor_nama):</p>
-            <p style="font-size: 0.8rem; color: var(--muted);">
-                @forelse (\App\Models\Vendor::orderBy('name')->get() as $v)
-                    {{ $v->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
-                @empty
-                    Belum ada vendor terdaftar — <a href="{{ route('vendors.create') }}" target="_blank">tambah dulu di sini</a>.
-                @endforelse
-            </p>
-        </div>
+                    </p>
+                </div>
+                <div style="margin-top: 14px;">
+                    <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Kode unit:</p>
+                    <p style="font-size: 0.8rem; color: var(--muted);">
+                        @foreach ($units as $u)
+                            <span class="code-chip" style="margin: 2px;">{{ $u->code }}</span> {{ $u->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
+                        @endforeach
+                    </p>
+                </div>
+                <div style="margin-top: 14px;">
+                    <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Nama lokasi (isi persis sama di kolom lokasi_nama, harus sesuai unitnya):</p>
+                    @forelse ($locationsByUnit as $unitName => $locs)
+                        <p style="font-size: 0.8rem; margin-bottom: 4px;">
+                            <strong>{{ $unitName }}:</strong>
+                            <span style="color: var(--muted);">
+                                @foreach ($locs as $loc)
+                                    {{ $loc->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
+                                @endforeach
+                            </span>
+                        </p>
+                    @empty
+                        <p style="font-size: 0.8rem; color: var(--muted);">Belum ada lokasi terdaftar — <a href="{{ route('locations.create') }}" target="_blank">tambah dulu di sini</a>.</p>
+                    @endforelse
+                </div>
+                <div style="margin-top: 14px;">
+                    <p style="font-size: 0.82rem; font-weight: 600; margin-bottom: 8px;">Nama vendor yang sudah terdaftar:</p>
+                    <p style="font-size: 0.8rem; color: var(--muted);">
+                        @forelse (\App\Models\Vendor::orderBy('name')->get() as $v)
+                            {{ $v->name }}@if(!$loop->last) &nbsp;·&nbsp; @endif
+                        @empty
+                            Belum ada vendor terdaftar.
+                        @endforelse
+                    </p>
+                    <p style="font-size: 0.78rem; color: var(--muted); margin-top: 6px;">Tidak perlu persis sama — kalau beda tulisan tipis (mis. "CV Risc" vs "CV. RISC Computer"), nanti ditawarkan buat dicocokkan di halaman kroscek sebelum tersimpan.</p>
+                </div>
+            </div>
+        </details>
     </div>
 
     <div class="card">
@@ -69,14 +74,22 @@
                 <input type="file" name="file" accept=".xlsx,.xls,.csv">
                 @error('file') <div class="form-error">{{ $message }}</div> @enderror
             </div>
-            <button type="submit" class="btn">Import Sekarang</button>
+            <button type="submit" class="btn">Lanjut ke Kroscek →</button>
         </form>
 
-        <div style="margin-top: 20px; font-size: 0.8rem; color: var(--muted);">
-            <p style="font-weight: 600; margin-bottom: 6px;">Format kolom (urutan harus sama seperti template):</p>
-            <p><code>nama_aset, kategori_kode, unit_kode, lokasi_nama, merk, model, no_seri, tanggal_perolehan (YYYY-MM-DD), sumber_perolehan (pengadaan/hibah/bantuan/lainnya), nilai_perolehan, kondisi (baik/rusak_ringan/rusak_berat/hilang), status (aktif/dalam_perbaikan/dipinjamkan/dihapuskan), kode_barang_simak, vendor_nama, nomor_urut_simak</code></p>
-            <p style="margin-top: 8px;"><code>lokasi_nama</code>, <code>vendor_nama</code>, <code>kode_barang_simak</code>, dan <code>nomor_urut_simak</code> boleh dikosongkan. <code>vendor_nama</code> kalau belum ada di <a href="{{ route('vendors.index') }}" target="_blank">Master Vendor</a> akan <strong>otomatis dibuatkan baru</strong> — jadi pastikan penulisan namanya konsisten (misal jangan "CV Risc" di satu baris dan "CV. RISC Computer" di baris lain, nanti jadi 2 vendor beda). Kode aset & QR Code dibuat otomatis, tidak perlu diisi di CSV.</p>
-        </div>
+        <details class="review-panel" style="margin-top: 18px;">
+            <summary>Lihat format kolom</summary>
+            <div class="review-panel__body">
+                <p><code>nama_aset, kategori_kode, unit_kode, lokasi_nama, merk, model, no_seri, tanggal_perolehan (YYYY-MM-DD), sumber_perolehan (pengadaan/hibah/bantuan/lainnya), nilai_perolehan, kondisi (baik/rusak_ringan/rusak_berat/hilang), status (aktif/dalam_perbaikan/dipinjamkan/dihapuskan), kode_barang_simak, vendor_nama, nomor_urut_simak</code></p>
+                <p style="margin-top: 8px;"><code>lokasi_nama</code>, <code>vendor_nama</code>, <code>kode_barang_simak</code>, dan <code>nomor_urut_simak</code> boleh dikosongkan. Kode aset & QR Code dibuat otomatis, tidak perlu diisi di CSV.</p>
+            </div>
+        </details>
+    </div>
+
+    <div class="card" style="background: var(--sky-pale);">
+        <p style="font-size: 0.85rem; margin: 0; color: var(--navy);">
+            <strong>3. Kroscek &amp; Konfirmasi</strong> — setelah upload, belum langsung masuk database. Kamu akan diajak ke halaman kroscek buat lihat baris mana yang siap/error, dan buat vendor yang namanya mirip/baru bisa pilih mau dicocokkan ke yang sudah ada atau dibuatkan baru.
+        </p>
     </div>
 
     @if (session('importErrors') && count(session('importErrors')) > 0)
