@@ -1,0 +1,11 @@
+vendor/
+node_modules/
+storage/framework/
+storage/logs/
+storage/app/public/
+storage/pail/
+public/storage/
+public/build/
+bootstrap/cache/
+*.log
+composer.lock
