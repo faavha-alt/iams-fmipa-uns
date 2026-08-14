@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Concerns\ImportsSpreadsheet;
+use App\Models\Asset;
 use App\Models\BmnCodeReference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,17 @@ class BmnCodeController extends Controller
 
     public function index(Request $request): View
     {
+        // Kolom yang boleh dipakai sorting, dipetakan ke nama kolom SQL supaya tidak bisa disuntik lewat query string.
+        $sortColumns = [
+            'kode' => 'kode',
+            'nama' => 'nama',
+            'assets_count' => 'assets_count',
+        ];
+        $sort = array_key_exists($request->input('sort'), $sortColumns) ? $request->input('sort') : 'assets_count';
+        $direction = $request->input('direction') === 'asc' ? 'asc' : 'desc';
+
         $codes = BmnCodeReference::query()
+            ->withCount('assets')
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
                 $q->where(function ($sub) use ($search) {
@@ -25,11 +36,88 @@ class BmnCodeController extends Controller
                         ->orWhere('nama', 'like', "%{$search}%");
                 });
             })
-            ->orderBy('kode')
+            ->orderBy($sortColumns[$sort], $direction)
             ->paginate(20)
             ->appends($request->query());
 
-        return view('bmn-codes.index', ['codes' => $codes]);
+        // Statistik ringkas — dihitung dari seluruh master kode BMN & aset, tidak ikut kepotong
+        // pencarian di atas, supaya jadi gambaran utuh (mirip statistik di halaman Daftar Aset).
+        $totalCodes = BmnCodeReference::count();
+        $codesInUse = BmnCodeReference::has('assets')->count();
+        $totalAssets = Asset::count();
+        $assetsWithCode = Asset::whereNotNull('simak_kode_barang')->where('simak_kode_barang', '!=', '')->count();
+        $assetsWithoutCode = $totalAssets - $assetsWithCode;
+
+        return view('bmn-codes.index', [
+            'codes' => $codes,
+            'totalCodes' => $totalCodes,
+            'codesInUse' => $codesInUse,
+            'assetsWithCode' => $assetsWithCode,
+            'assetsWithoutCode' => $assetsWithoutCode,
+            'sort' => $sort,
+            'direction' => $direction,
+        ]);
+    }
+
+    /**
+     * Detail satu kode BMN — daftar aset yang pakai kode ini, bisa langsung diedit dari sini.
+     */
+    public function show(Request $request, BmnCodeReference $bmnCode): View
+    {
+        $assetBase = $bmnCode->assets();
+        $totalAssets = (clone $assetBase)->count();
+        $totalValue = (clone $assetBase)->sum('acquisition_value');
+
+        $conditionCounts = (clone $assetBase)
+            ->select('condition')->selectRaw('count(*) as total')
+            ->groupBy('condition')->pluck('total', 'condition');
+
+        $conditions = collect(['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])
+            ->map(fn ($key) => [
+                'key' => $key,
+                'total' => $conditionCounts[$key] ?? 0,
+                'percent' => $totalAssets > 0 ? round((($conditionCounts[$key] ?? 0) / $totalAssets) * 100) : 0,
+            ]);
+
+        // Kolom yang boleh dipakai sorting, dipetakan ke nama kolom SQL supaya tidak bisa disuntik lewat query string.
+        $sortColumns = [
+            'name' => 'assets.name',
+            'brand' => 'assets.brand',
+            'condition' => 'assets.condition',
+            'status' => 'assets.status',
+            'unit' => 'units.name',
+        ];
+        $sort = array_key_exists($request->input('sort'), $sortColumns) ? $request->input('sort') : 'name';
+        $direction = $request->input('direction') === 'desc' ? 'desc' : 'asc';
+
+        $assetsQuery = $bmnCode->assets()->with(['category', 'unit', 'location']);
+        if ($sort === 'unit') {
+            $assetsQuery->leftJoin('units', 'assets.unit_id', '=', 'units.id')->select('assets.*');
+        }
+
+        $assets = $assetsQuery
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->string('search');
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('assets.name', 'like', "%{$search}%")
+                        ->orWhere('assets.brand', 'like', "%{$search}%")
+                        ->orWhere('assets.serial_number', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('condition'), fn ($q) => $q->where('assets.condition', $request->input('condition')))
+            ->when($request->filled('status'), fn ($q) => $q->where('assets.status', $request->input('status')))
+            ->orderBy($sortColumns[$sort], $direction)
+            ->get();
+
+        return view('bmn-codes.show', [
+            'bmnCode' => $bmnCode,
+            'assets' => $assets,
+            'totalAssets' => $totalAssets,
+            'totalValue' => $totalValue,
+            'conditions' => $conditions,
+            'sort' => $sort,
+            'direction' => $direction,
+        ]);
     }
 
     /**

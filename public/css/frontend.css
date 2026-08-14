@@ -285,10 +285,11 @@ td a:hover { text-decoration: underline; }
     display: inline-block; padding: 3px 11px; border-radius: 6px;
     font-size: 11px; font-weight: 700; text-transform: capitalize;
 }
-.badge-baik, .badge-disetujui { background: var(--light-green); color: #065F46; }
-.badge-rusak_ringan, .badge-diajukan { background: #FEF9C3; color: #92400E; }
-.badge-rusak_berat, .badge-ditolak { background: var(--light-red); color: #991B1B; }
+.badge-baik, .badge-disetujui, .badge-aktif { background: var(--light-green); color: #065F46; }
+.badge-rusak_ringan, .badge-diajukan, .badge-dalam_perbaikan { background: #FEF9C3; color: #92400E; }
+.badge-rusak_berat, .badge-ditolak, .badge-dihapuskan { background: var(--light-red); color: #991B1B; }
 .badge-hilang { background: #F1F5F9; color: #475569; }
+.badge-dipinjamkan { background: var(--sky-pale); color: var(--cerulean-dark); }
 
 /* ===== Forms ===== */
 

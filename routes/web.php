@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/units/create', [UnitController::class, 'create'])->name('units.create');
         Route::post('/units', [UnitController::class, 'store'])->name('units.store');
         Route::get('/units/{unit}/edit', [UnitController::class, 'edit'])->name('units.edit');
+        Route::get('/units/{unit}', [UnitController::class, 'show'])->name('units.show');
         Route::put('/units/{unit}', [UnitController::class, 'update'])->name('units.update');
         Route::post('/units/{unit}/toggle-active', [UnitController::class, 'toggleActive'])->name('units.toggle-active');
         Route::delete('/units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
@@ -115,6 +116,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/bmn-codes/import/template', [BmnCodeController::class, 'downloadTemplate'])->name('bmn-codes.import.template');
         Route::post('/bmn-codes/import', [BmnCodeController::class, 'import'])->name('bmn-codes.import.process');
         Route::get('/bmn-codes/{bmnCode}/edit', [BmnCodeController::class, 'edit'])->name('bmn-codes.edit');
+        Route::get('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'show'])->name('bmn-codes.show');
         Route::put('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'update'])->name('bmn-codes.update');
         Route::delete('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'destroy'])->name('bmn-codes.destroy');
 

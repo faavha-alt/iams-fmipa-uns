@@ -41,11 +41,53 @@ class AssetController extends Controller
             ->paginate(10)
             ->appends($request->query());
 
+        // Statistik ringkas — dihitung dari seluruh aset yang berhak dilihat user
+        // (scoped per unit kalau bukan admin), TIDAK ikut kepotong filter pencarian di atas,
+        // supaya jadi gambaran utuh inventaris, bukan cuma hasil filter saat itu.
+        $statsBase = Asset::query()->when(! $isAdmin, fn ($q) => $q->where('unit_id', $user->unit_id));
+        $totalAssets = (clone $statsBase)->count();
+        $totalValue = (clone $statsBase)->sum('acquisition_value');
+
+        $conditionCounts = (clone $statsBase)
+            ->select('condition')
+            ->selectRaw('count(*) as total')
+            ->groupBy('condition')
+            ->pluck('total', 'condition');
+
+        $statusCounts = (clone $statsBase)
+            ->select('status')
+            ->selectRaw('count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $conditions = collect(['baik', 'rusak_ringan', 'rusak_berat', 'hilang'])
+            ->map(fn ($key) => [
+                'key' => $key,
+                'total' => $conditionCounts[$key] ?? 0,
+                'percent' => $totalAssets > 0 ? round((($conditionCounts[$key] ?? 0) / $totalAssets) * 100) : 0,
+            ]);
+
+        $statuses = collect(['aktif', 'dalam_perbaikan', 'dipinjamkan', 'dihapuskan'])
+            ->map(fn ($key) => [
+                'key' => $key,
+                'total' => $statusCounts[$key] ?? 0,
+                'percent' => $totalAssets > 0 ? round((($statusCounts[$key] ?? 0) / $totalAssets) * 100) : 0,
+            ]);
+
+        $goodConditionPercent = $totalAssets > 0 ? round((($conditionCounts['baik'] ?? 0) / $totalAssets) * 100) : 0;
+        $needsAttentionCount = ($conditionCounts['rusak_ringan'] ?? 0) + ($conditionCounts['rusak_berat'] ?? 0) + ($conditionCounts['hilang'] ?? 0);
+
         return view('assets.index', [
             'assets' => $assets,
             'units' => Unit::orderBy('name')->get(),
             'categories' => AssetCategory::orderBy('name')->get(),
             'isAdmin' => $isAdmin,
+            'totalAssets' => $totalAssets,
+            'totalValue' => $totalValue,
+            'conditions' => $conditions,
+            'statuses' => $statuses,
+            'goodConditionPercent' => $goodConditionPercent,
+            'needsAttentionCount' => $needsAttentionCount,
         ]);
     }
 
