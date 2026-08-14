@@ -29,11 +29,8 @@
                 <a href="{{ route('requests.index') }}" class="{{ request()->routeIs('requests.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="1.8"/><path d="M9 3v2h6V3M8.5 10h7M8.5 14h5" stroke-linecap="round"/></svg>
                     Pengajuan
-                    @if ($isAdmin ?? (auth()->user()->role === 'admin'))
-                        @php($pendingCount = \App\Models\AssetRequest::where('status', 'diajukan')->count())
-                        @if ($pendingCount > 0)
-                            <span class="nav-badge">{{ $pendingCount }}</span>
-                        @endif
+                    @if ($pendingRequestCount > 0)
+                        <span class="nav-badge">{{ $pendingRequestCount }}</span>
                     @endif
                 </a>
                 @if (auth()->user()->role === 'admin')

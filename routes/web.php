@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 
         Route::get('/bmn-codes', [BmnCodeController::class, 'index'])->name('bmn-codes.index');
+        Route::get('/bmn-codes/search', [BmnCodeController::class, 'search'])->name('bmn-codes.search');
         Route::get('/bmn-codes/create', [BmnCodeController::class, 'create'])->name('bmn-codes.create');
         Route::post('/bmn-codes', [BmnCodeController::class, 'store'])->name('bmn-codes.store');
         Route::get('/bmn-codes/import', [BmnCodeController::class, 'importForm'])->name('bmn-codes.import');

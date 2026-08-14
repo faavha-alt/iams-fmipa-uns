@@ -66,11 +66,12 @@ class DashboardController extends Controller
         $budgetSummary = null;
         if ($isAdmin) {
             $year = now()->year;
+            $yearRange = ["{$year}-01-01", "{$year}-12-31"];
             $totalPagu = \App\Models\Budget::whereHas('unit', fn ($q) => $q->where('type', 'fakultas'))
                 ->where('fiscal_year', $year)
                 ->sum('amount');
-            $totalRealisasiAset = (clone $assetBase)->whereYear('acquisition_date', $year)->sum('acquisition_value');
-            $totalRealisasiBelumFinal = \App\Models\PurchaseRealization::where('status', 'belum_final')->whereYear('purchase_date', $year)->sum('cost');
+            $totalRealisasiAset = (clone $assetBase)->whereBetween('acquisition_date', $yearRange)->sum('acquisition_value');
+            $totalRealisasiBelumFinal = \App\Models\PurchaseRealization::where('status', 'belum_final')->whereBetween('purchase_date', $yearRange)->sum('cost');
             $totalRealisasi = $totalRealisasiAset + $totalRealisasiBelumFinal;
             $budgetSummary = [
                 'pagu' => $totalPagu,

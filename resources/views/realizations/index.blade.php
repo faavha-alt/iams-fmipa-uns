@@ -126,7 +126,7 @@
                                                 </form>
                                             </div>
                                         @else
-                                            <span style="color: var(--muted); font-size: 0.8rem;">{{ $r->assets()->count() }} aset dibuat</span>
+                                            <span style="color: var(--muted); font-size: 0.8rem;">{{ $r->assets_count }} aset dibuat</span>
                                         @endif
                                     </td>
                                 </tr>

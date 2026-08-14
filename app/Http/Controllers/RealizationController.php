@@ -17,10 +17,12 @@ class RealizationController extends Controller
     public function index(Request $request): View
     {
         $year = (int) $request->input('year', now()->year);
+        $yearRange = ["{$year}-01-01", "{$year}-12-31"];
 
         $realizations = PurchaseRealization::query()
             ->with(['unit', 'category', 'recordedBy', 'procurementBatch.vendor', 'vendor'])
-            ->whereYear('purchase_date', $year)
+            ->withCount('assets')
+            ->whereBetween('purchase_date', $yearRange)
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->when($request->filled('unit_id'), fn ($q) => $q->where('unit_id', $request->input('unit_id')))
             ->when($request->filled('search'), fn ($q) => $q->where('item_name', 'like', '%'.$request->input('search').'%'))
@@ -37,8 +39,8 @@ class RealizationController extends Controller
             'grouped' => $grouped,
             'year' => $year,
             'units' => Unit::orderBy('name')->get(),
-            'totalBelumFinal' => PurchaseRealization::whereYear('purchase_date', $year)->where('status', 'belum_final')->sum('cost'),
-            'totalSudahFinal' => PurchaseRealization::whereYear('purchase_date', $year)->where('status', 'sudah_final')->sum('cost'),
+            'totalBelumFinal' => PurchaseRealization::whereBetween('purchase_date', $yearRange)->where('status', 'belum_final')->sum('cost'),
+            'totalSudahFinal' => PurchaseRealization::whereBetween('purchase_date', $yearRange)->where('status', 'sudah_final')->sum('cost'),
         ]);
     }
 

@@ -121,7 +121,7 @@
                                         </a>
                                     </div>
                                 @else
-                                    <span style="color: var(--muted); font-size: 0.8rem;">{{ $item->assets()->count() }} aset dibuat</span>
+                                    <span style="color: var(--muted); font-size: 0.8rem;">{{ $item->assets_count }} aset dibuat</span>
                                 @endif
                             </td>
                         </tr>

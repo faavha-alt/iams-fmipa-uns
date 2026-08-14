@@ -16,40 +16,55 @@ class BudgetController extends Controller
     {
         $year = (int) $request->input('year', now()->year);
 
-        $units = Unit::whereIn('type', ['program_studi', 'laboratorium', 'departemen', 'unit_kerja'])
+        $unitsCollection = Unit::whereIn('type', ['program_studi', 'laboratorium', 'departemen', 'unit_kerja'])
             ->orderBy('type')
             ->orderBy('name')
-            ->get()
-            ->map(fn (Unit $unit) => $this->buildUnitRow($unit, $year));
+            ->get();
 
-        $faculties = Unit::where('type', 'fakultas')
-            ->orderBy('name')
-            ->get()
-            ->map(function (Unit $fakultas) use ($year) {
-                $childIds = Unit::where('parent_id', $fakultas->id)->pluck('id');
+        $facultiesCollection = Unit::where('type', 'fakultas')->orderBy('name')->get();
+        $facultyIds = $facultiesCollection->pluck('id')->all();
 
-                $pagu = Budget::where('unit_id', $fakultas->id)->where('fiscal_year', $year)->value('amount') ?? 0;
-                $dialokasikan = Budget::whereIn('unit_id', $childIds)->where('fiscal_year', $year)->sum('amount');
-                $realisasiSendiri = $this->hitungRealisasi($fakultas->id, $year);
-                $realisasiAnak = Asset::whereIn('unit_id', $childIds)->whereYear('acquisition_date', $year)->sum('acquisition_value')
-                    + PurchaseRealization::whereIn('unit_id', $childIds)->where('status', 'belum_final')->whereYear('purchase_date', $year)->sum('cost');
-                $totalRealisasi = $realisasiSendiri + $realisasiAnak;
+        $childUnits = $facultyIds ? Unit::whereIn('parent_id', $facultyIds)->get(['id', 'parent_id']) : collect();
+        $childIdsByParent = $childUnits->groupBy('parent_id')->map(fn ($c) => $c->pluck('id')->all());
 
-                return [
-                    'unit' => $fakultas,
-                    'pagu' => $pagu,
-                    'dialokasikan' => $dialokasikan,
-                    'sisa_alokasi' => $pagu - $dialokasikan,
-                    'over_alokasi' => $dialokasikan > $pagu,
-                    'realisasi_sendiri' => $realisasiSendiri,
-                    'realisasi_anak' => $realisasiAnak,
-                    'total_realisasi' => $totalRealisasi,
-                    'sisa_riil' => $pagu - $totalRealisasi,
-                    'over_realisasi' => $totalRealisasi > $pagu,
-                    'percent_alokasi' => $pagu > 0 ? min(100, round(($dialokasikan / $pagu) * 100)) : 0,
-                    'percent_realisasi' => $pagu > 0 ? min(100, round(($totalRealisasi / $pagu) * 100)) : 0,
-                ];
-            });
+        // Semua unit yang butuh pagu/realisasi diambil sekaligus (bukan per-unit di dalam map())
+        // supaya jumlah query tidak bertumbuh linear dengan jumlah prodi/fakultas.
+        $allUnitIds = $unitsCollection->pluck('id')
+            ->merge($facultiesCollection->pluck('id'))
+            ->merge($childUnits->pluck('id'))
+            ->unique()
+            ->values()
+            ->all();
+
+        $paguMap = $this->paguMap($allUnitIds, $year);
+        $realisasiMap = $this->realisasiMap($allUnitIds, $year);
+
+        $units = $unitsCollection->map(fn (Unit $unit) => $this->buildUnitRow($unit, $paguMap, $realisasiMap));
+
+        $faculties = $facultiesCollection->map(function (Unit $fakultas) use ($paguMap, $realisasiMap, $childIdsByParent) {
+            $childIds = $childIdsByParent[$fakultas->id] ?? [];
+
+            $pagu = $paguMap[$fakultas->id] ?? 0;
+            $dialokasikan = collect($childIds)->sum(fn ($id) => $paguMap[$id] ?? 0);
+            $realisasiSendiri = $realisasiMap[$fakultas->id] ?? 0;
+            $realisasiAnak = collect($childIds)->sum(fn ($id) => $realisasiMap[$id] ?? 0);
+            $totalRealisasi = $realisasiSendiri + $realisasiAnak;
+
+            return [
+                'unit' => $fakultas,
+                'pagu' => $pagu,
+                'dialokasikan' => $dialokasikan,
+                'sisa_alokasi' => $pagu - $dialokasikan,
+                'over_alokasi' => $dialokasikan > $pagu,
+                'realisasi_sendiri' => $realisasiSendiri,
+                'realisasi_anak' => $realisasiAnak,
+                'total_realisasi' => $totalRealisasi,
+                'sisa_riil' => $pagu - $totalRealisasi,
+                'over_realisasi' => $totalRealisasi > $pagu,
+                'percent_alokasi' => $pagu > 0 ? min(100, round(($dialokasikan / $pagu) * 100)) : 0,
+                'percent_realisasi' => $pagu > 0 ? min(100, round(($totalRealisasi / $pagu) * 100)) : 0,
+            ];
+        });
 
         $availableYears = range(now()->year + 1, now()->year - 3);
 
@@ -100,23 +115,24 @@ class BudgetController extends Controller
     public function show(Request $request, Unit $unit): View
     {
         $year = (int) $request->input('year', now()->year);
+        $yearRange = ["{$year}-01-01", "{$year}-12-31"];
 
         $pagu = Budget::where('unit_id', $unit->id)->where('fiscal_year', $year)->value('amount') ?? 0;
 
         $assets = Asset::where('unit_id', $unit->id)
-            ->whereYear('acquisition_date', $year)
+            ->whereBetween('acquisition_date', $yearRange)
             ->with('category')
             ->latest('acquisition_date')
             ->get();
 
         $realizations = PurchaseRealization::where('unit_id', $unit->id)
-            ->whereYear('purchase_date', $year)
+            ->whereBetween('purchase_date', $yearRange)
             ->with('category')
             ->latest('purchase_date')
             ->get();
 
         $requests = \App\Models\AssetRequest::where('unit_id', $unit->id)
-            ->whereYear('created_at', $year)
+            ->whereBetween('created_at', ["{$year}-01-01 00:00:00", "{$year}-12-31 23:59:59"])
             ->with('category')
             ->latest()
             ->get();
@@ -127,10 +143,12 @@ class BudgetController extends Controller
 
         $children = collect();
         if ($unit->type === 'fakultas') {
-            $children = Unit::where('parent_id', $unit->id)
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Unit $child) => $this->buildUnitRow($child, $year));
+            $childUnits = Unit::where('parent_id', $unit->id)->orderBy('name')->get();
+            $childIds = $childUnits->pluck('id')->all();
+            $childPaguMap = $this->paguMap($childIds, $year);
+            $childRealisasiMap = $this->realisasiMap($childIds, $year);
+
+            $children = $childUnits->map(fn (Unit $child) => $this->buildUnitRow($child, $childPaguMap, $childRealisasiMap));
         }
 
         return view('budgets.show', [
@@ -149,18 +167,50 @@ class BudgetController extends Controller
         ]);
     }
 
-    private function hitungRealisasi(int $unitId, int $year): float
+    /** Pagu tiap unit (tahun tertentu), diambil sekaligus untuk banyak unit sekaligus. Key: unit_id. */
+    private function paguMap(array $unitIds, int $year): array
     {
-        $realisasiAset = Asset::where('unit_id', $unitId)->whereYear('acquisition_date', $year)->sum('acquisition_value');
-        $realisasiBelumFinal = PurchaseRealization::where('unit_id', $unitId)->where('status', 'belum_final')->whereYear('purchase_date', $year)->sum('cost');
+        if (empty($unitIds)) {
+            return [];
+        }
 
-        return $realisasiAset + $realisasiBelumFinal;
+        return Budget::whereIn('unit_id', $unitIds)->where('fiscal_year', $year)->pluck('amount', 'unit_id')->all();
     }
 
-    private function buildUnitRow(Unit $unit, int $year): array
+    /** Realisasi (aset resmi + realisasi belum-final) tiap unit, diambil sekaligus. Key: unit_id. */
+    private function realisasiMap(array $unitIds, int $year): array
     {
-        $pagu = Budget::where('unit_id', $unit->id)->where('fiscal_year', $year)->value('amount') ?? 0;
-        $realisasi = $this->hitungRealisasi($unit->id, $year);
+        if (empty($unitIds)) {
+            return [];
+        }
+
+        $yearRange = ["{$year}-01-01", "{$year}-12-31"];
+
+        $assetSums = Asset::whereIn('unit_id', $unitIds)
+            ->whereBetween('acquisition_date', $yearRange)
+            ->selectRaw('unit_id, SUM(acquisition_value) as total')
+            ->groupBy('unit_id')
+            ->pluck('total', 'unit_id');
+
+        $realizationSums = PurchaseRealization::whereIn('unit_id', $unitIds)
+            ->where('status', 'belum_final')
+            ->whereBetween('purchase_date', $yearRange)
+            ->selectRaw('unit_id, SUM(cost) as total')
+            ->groupBy('unit_id')
+            ->pluck('total', 'unit_id');
+
+        $map = [];
+        foreach ($unitIds as $id) {
+            $map[$id] = (float) ($assetSums[$id] ?? 0) + (float) ($realizationSums[$id] ?? 0);
+        }
+
+        return $map;
+    }
+
+    private function buildUnitRow(Unit $unit, array $paguMap, array $realisasiMap): array
+    {
+        $pagu = $paguMap[$unit->id] ?? 0;
+        $realisasi = $realisasiMap[$unit->id] ?? 0;
         $sisa = $pagu - $realisasi;
 
         return [

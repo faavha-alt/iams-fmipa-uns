@@ -170,12 +170,10 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Kode Barang BMN</label>
-                            <input type="text" name="simak_kode_barang" list="bmn-code-list" value="{{ old('simak_kode_barang', $asset->simak_kode_barang ?? '') }}" placeholder="Ketik buat cari, contoh: kursi atau 3.05.02.01.001">
-                            <datalist id="bmn-code-list">
-                                @foreach (\App\Models\BmnCodeReference::orderBy('kode')->get() as $bmn)
-                                    <option value="{{ $bmn->kode }}">{{ $bmn->nama }}</option>
-                                @endforeach
-                            </datalist>
+                            <div class="typeahead" data-typeahead-url="{{ route('bmn-codes.search') }}">
+                                <input type="text" name="simak_kode_barang" autocomplete="off" value="{{ old('simak_kode_barang', $asset->simak_kode_barang ?? '') }}" placeholder="Ketik buat cari, contoh: kursi atau 3.05.02.01.001">
+                                <div class="typeahead__results" hidden></div>
+                            </div>
                             <p style="font-size: 0.78rem; color: var(--muted); margin-top: 4px;">Mulai ketik buat cari dari daftar Kode BMN yang sudah didaftarkan di <a href="{{ route('bmn-codes.index') }}" target="_blank">Master Kode BMN</a>, atau ketik manual kalau belum ada.</p>
                             @error('simak_kode_barang') <div class="form-error">{{ $message }}</div> @enderror
                         </div>

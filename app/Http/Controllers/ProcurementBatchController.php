@@ -65,7 +65,7 @@ class ProcurementBatchController extends Controller
             ->limit(100)
             ->get();
 
-        $items = $procurementBatch->realizations()->with(['unit', 'category'])->latest('purchase_date')->get();
+        $items = $procurementBatch->realizations()->with(['unit', 'category'])->withCount('assets')->latest('purchase_date')->get();
 
         return view('procurement-batches.show', [
             'batch' => $procurementBatch,

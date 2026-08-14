@@ -9,6 +9,7 @@ use App\Models\Budget;
 use App\Models\PurchaseRealization;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class AssetRequestController extends Controller
@@ -89,6 +90,8 @@ class AssetRequestController extends Controller
             'status' => 'diajukan',
         ]);
 
+        Cache::forget('pending_request_count');
+
         return redirect()->route('requests.index')->with('message', 'Pengajuan berhasil dikirim, menunggu tinjauan admin.');
     }
 
@@ -108,6 +111,8 @@ class AssetRequestController extends Controller
             'review_notes' => $data['review_notes'] ?? null,
         ]);
 
+        Cache::forget('pending_request_count');
+
         $message = $data['decision'] === 'setuju' ? 'Pengajuan disetujui.' : 'Pengajuan ditolak.';
 
         return redirect()->route('requests.index')->with('message', $message);
@@ -115,9 +120,10 @@ class AssetRequestController extends Controller
 
     private function hitungSisaPagu(int $unitId, int $year): float
     {
+        $yearRange = ["{$year}-01-01", "{$year}-12-31"];
         $pagu = Budget::where('unit_id', $unitId)->where('fiscal_year', $year)->value('amount') ?? 0;
-        $realisasiAset = Asset::where('unit_id', $unitId)->whereYear('acquisition_date', $year)->sum('acquisition_value');
-        $realisasiBelumFinal = PurchaseRealization::where('unit_id', $unitId)->where('status', 'belum_final')->whereYear('purchase_date', $year)->sum('cost');
+        $realisasiAset = Asset::where('unit_id', $unitId)->whereBetween('acquisition_date', $yearRange)->sum('acquisition_value');
+        $realisasiBelumFinal = PurchaseRealization::where('unit_id', $unitId)->where('status', 'belum_final')->whereBetween('purchase_date', $yearRange)->sum('cost');
 
         return $pagu - ($realisasiAset + $realisasiBelumFinal);
     }

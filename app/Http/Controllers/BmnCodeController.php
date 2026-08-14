@@ -32,6 +32,30 @@ class BmnCodeController extends Controller
         return view('bmn-codes.index', ['codes' => $codes]);
     }
 
+    /**
+     * Typeahead buat form aset — dulunya seluruh tabel di-load ke <datalist> di setiap
+     * buka form, sekarang cuma kirim beberapa hasil yang cocok lewat AJAX.
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $search = trim((string) $request->query('q', ''));
+
+        if (mb_strlen($search) < 2) {
+            return response()->json([]);
+        }
+
+        $codes = BmnCodeReference::query()
+            ->where(function ($q) use ($search) {
+                $q->where('kode', 'like', "%{$search}%")
+                    ->orWhere('nama', 'like', "%{$search}%");
+            })
+            ->orderBy('kode')
+            ->limit(20)
+            ->get(['kode', 'nama']);
+
+        return response()->json($codes);
+    }
+
     public function create(): View
     {
         return view('bmn-codes.form', ['code' => null]);
