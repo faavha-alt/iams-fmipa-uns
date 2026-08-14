@@ -73,10 +73,10 @@ Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
 | Modul | Controller | Keterangan |
 |---|---|---|
 | Dashboard | `DashboardController` | Statistik ringkas, scoped per role |
-| Aset | `AssetController` | CRUD + import Excel massal |
+| Aset | `AssetController` | CRUD + import Excel massal. Cetak sticker aset terpilih (F4, ~20/lembar) berisi QR ke halaman publik `assets.public-info` |
 | Kategori Aset | `CategoryController` | Hierarkis (`parent_id`), ada `unit_satuan` |
 | Unit/Prodi | `UnitController` | Hierarkis, kode auto-generate |
-| Lokasi | `LocationController` | Terikat ke unit |
+| Lokasi | `LocationController` | Terikat ke unit. Detail lokasi ada rekap kategori/kondisi + tabel aset filterable/sortable + cetak DBR (Daftar Barang Ruangan, F4) dengan QR ke halaman publik `locations.public-info` |
 | Vendor | `VendorController` | Soft delete |
 | Pengajuan Aset | `AssetRequestController` | Alur approve/reject dari pengaju ke admin, wajib upload gambar + link referensi |
 | **Pengadaan** (`procurement_batches`) | `ProcurementBatchController` | **Header transaksi** — vendor, tanggal, nomor dokumen. Vendor **wajib** di validasi (`required`). Kolom `vendor_id` di DB tetap nullable supaya data lama (dari sebelum aturan ini) tidak rusak, tapi Pengadaan baru wajib pilih vendor. |
@@ -102,6 +102,7 @@ Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari for
 - **Harga**: form selalu minta **harga satuan**, total dihitung otomatis (vanilla JS live preview + dihitung ulang di server saat validasi, jangan percaya angka dari client).
 - **File upload**: pakai `Storage::disk('public')`, butuh `php artisan storage:link` di server. Folder: `pengajuan/` (bukti pengajuan), `bast/` (scan BAST), `settings/` (kop surat).
 - **Import Excel**: pakai trait `App\Concerns\ImportsSpreadsheet` (baca xlsx/xls/csv otomatis lewat PhpSpreadsheet).
+- **Rute publik tanpa login**: hanya dua — `/ruangan/{location}` dan `/aset/{asset:qr_code}` (dibuka dari hasil scan QR sticker/DBR). Keduanya di luar middleware `auth`, didefinisikan sebelum grup `Route::middleware('auth')` di `routes/web.php`. Route model binding aset sengaja pakai kolom `qr_code` (bukan `id`) supaya URL tidak gampang ditebak — ikuti pola ini kalau nambah halaman publik baru, jangan pakai `id` auto-increment mentah.
 - **Null-safe operator**: HATI-HATI kalau bikin form yang dipakai bareng create+edit (`$model` bisa `null` saat create) — pakai `$model?->relasi?->format(...)`, BUKAN `$model->relasi?->format(...)` (baru cukup error kalau `$model`-nya sendiri null).
 
 ## Gotcha yang Sudah Pernah Kejadian (jangan diulang)
