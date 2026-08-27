@@ -153,12 +153,31 @@ class BudgetController extends Controller
         $totalRealisasi = $realisasiAset + $realisasiBelumFinal;
 
         $children = collect();
+        $recap = null;
         if ($isFakultas) {
             $childIds = $childUnits->pluck('id')->all();
             $childPaguMap = $this->paguMap($childIds, $year);
             $childRealisasiMap = $this->realisasiMap($childIds, $year);
 
             $children = $childUnits->map(fn (Unit $child) => $this->buildUnitRow($child, $childPaguMap, $childRealisasiMap));
+
+            // Rekap khusus fakultas: pisahkan belanja yang menempel langsung di unit fakultas
+            // (di luar prodi) dari belanja prodi, plus berapa pagu yang belum dialokasikan ke prodi.
+            $ownAssets = $assets->where('unit_id', $unit->id);
+            $ownRealizations = $realizations->where('unit_id', $unit->id);
+            $realisasiSendiri = $ownAssets->sum('acquisition_value')
+                + $ownRealizations->where('status', 'belum_final')->sum('cost');
+            $dialokasikan = collect($childPaguMap)->sum();
+
+            $recap = [
+                'dialokasikan' => $dialokasikan,
+                'sisa_alokasi' => $pagu - $dialokasikan,
+                'over_alokasi' => $dialokasikan > $pagu,
+                'realisasi_sendiri' => $realisasiSendiri,
+                'realisasi_prodi' => $totalRealisasi - $realisasiSendiri,
+                'aset_sendiri_count' => $ownAssets->count(),
+                'realisasi_sendiri_count' => $ownRealizations->count(),
+            ];
         }
 
         return view('budgets.show', [
@@ -175,6 +194,7 @@ class BudgetController extends Controller
             'realizations' => $realizations,
             'requests' => $requests,
             'children' => $children,
+            'recap' => $recap,
         ]);
     }
 

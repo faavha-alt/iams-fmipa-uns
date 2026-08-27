@@ -36,6 +36,40 @@
         </div>
     </div>
 
+    @if ($isFakultas && $recap)
+        <div class="card">
+            <div class="card__header"><h2 class="card__title">Rekap Fakultas (belanja langsung, di luar prodi)</h2></div>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>Pagu fakultas {{ $year }}</td>
+                        <td>Rp {{ number_format($pagu, 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Dialokasikan ke prodi</td>
+                        <td>Rp {{ number_format($recap['dialokasikan'], 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Sisa pagu untuk fakultas (belum dialokasikan)</td>
+                        <td style="color: {{ $recap['over_alokasi'] ? 'var(--danger)' : 'var(--ink)' }};">Rp {{ number_format($recap['sisa_alokasi'], 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Realisasi belanja <strong>langsung fakultas</strong> ({{ $recap['aset_sendiri_count'] }} aset, {{ $recap['realisasi_sendiri_count'] }} realisasi)</td>
+                        <td>Rp {{ number_format($recap['realisasi_sendiri'], 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td>Realisasi belanja prodi</td>
+                        <td>Rp {{ number_format($recap['realisasi_prodi'], 0, ',', '.') }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total realisasi fakultas</strong></td>
+                        <td><strong>Rp {{ number_format($totalRealisasi, 0, ',', '.') }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     @if ($unit->type === 'fakultas' && $children->count() > 0)
         <div class="card">
             <div class="card__header"><h2 class="card__title">Breakdown per Prodi</h2></div>
