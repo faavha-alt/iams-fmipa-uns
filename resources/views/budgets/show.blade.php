@@ -69,7 +69,7 @@
     @endif
 
     <div class="card">
-        <div class="card__header"><h2 class="card__title">Aset Tercatat ({{ $year }})</h2></div>
+        <div class="card__header"><h2 class="card__title">Aset Tercatat ({{ $year }}){{ $isFakultas ? ' · seluruh prodi' : '' }}</h2></div>
         @if ($assets->isEmpty())
             <div class="empty-state">Belum ada aset tercatat tahun ini.</div>
         @else
@@ -77,6 +77,7 @@
                 <thead>
                     <tr>
                         <th>Kode Aset</th>
+                        @if ($isFakultas)<th>Prodi/Unit</th>@endif
                         <th>Nama</th>
                         <th>Kategori</th>
                         <th>Tanggal</th>
@@ -87,6 +88,7 @@
                     @foreach ($assets as $asset)
                         <tr>
                             <td><span class="code-chip">{{ $asset->asset_code }}</span></td>
+                            @if ($isFakultas)<td>{{ $asset->unit?->name ?? '-' }}</td>@endif
                             <td>{{ $asset->name }}</td>
                             <td>{{ $asset->category?->name ?? '-' }}</td>
                             <td>{{ $asset->acquisition_date?->format('d M Y') ?? '-' }}</td>
@@ -99,7 +101,7 @@
     </div>
 
     <div class="card">
-        <div class="card__header"><h2 class="card__title">Realisasi Belanja ({{ $year }})</h2></div>
+        <div class="card__header"><h2 class="card__title">Realisasi Belanja ({{ $year }}){{ $isFakultas ? ' · seluruh prodi' : '' }}</h2></div>
         @if ($realizations->isEmpty())
             <div class="empty-state">Belum ada realisasi belanja tahun ini.</div>
         @else
@@ -107,6 +109,7 @@
                 <thead>
                     <tr>
                         <th>Barang</th>
+                        @if ($isFakultas)<th>Prodi/Unit</th>@endif
                         <th>Jumlah</th>
                         <th>Biaya</th>
                         <th>Tanggal</th>
@@ -117,6 +120,7 @@
                     @foreach ($realizations as $r)
                         <tr>
                             <td>{{ $r->item_name }}</td>
+                            @if ($isFakultas)<td>{{ $r->unit?->name ?? '-' }}</td>@endif
                             <td>{{ $r->quantity }}</td>
                             <td>Rp {{ number_format($r->cost, 0, ',', '.') }}</td>
                             <td>{{ $r->purchase_date->format('d M Y') }}</td>
@@ -135,7 +139,7 @@
     </div>
 
     <div class="card">
-        <div class="card__header"><h2 class="card__title">Riwayat Pengajuan ({{ $year }})</h2></div>
+        <div class="card__header"><h2 class="card__title">Riwayat Pengajuan ({{ $year }}){{ $isFakultas ? ' · seluruh prodi' : '' }}</h2></div>
         @if ($requests->isEmpty())
             <div class="empty-state">Belum ada pengajuan tahun ini.</div>
         @else
@@ -143,6 +147,7 @@
                 <thead>
                     <tr>
                         <th>Barang</th>
+                        @if ($isFakultas)<th>Prodi/Unit</th>@endif
                         <th>Jumlah</th>
                         <th>Estimasi Biaya</th>
                         <th>Status</th>
@@ -153,6 +158,7 @@
                     @foreach ($requests as $req)
                         <tr>
                             <td>{{ $req->item_name }}</td>
+                            @if ($isFakultas)<td>{{ $req->unit?->name ?? '-' }}</td>@endif
                             <td>{{ $req->quantity }}</td>
                             <td>{{ $req->estimated_cost ? 'Rp '.number_format($req->estimated_cost, 0, ',', '.') : '-' }}</td>
                             <td><span class="badge badge-{{ $req->status }}">{{ $req->status }}</span></td>

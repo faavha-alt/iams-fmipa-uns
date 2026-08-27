@@ -117,23 +117,34 @@ class BudgetController extends Controller
         $year = (int) $request->input('year', now()->year);
         $yearRange = ["{$year}-01-01", "{$year}-12-31"];
 
+        $isFakultas = $unit->type === 'fakultas';
+
+        $childUnits = $isFakultas
+            ? Unit::where('parent_id', $unit->id)->orderBy('name')->get()
+            : collect();
+
+        // Untuk fakultas, daftar aset/realisasi/pengajuan dikumpulkan dari fakultas + semua prodi
+        // di bawahnya. Kalau cuma difilter unit_id fakultas sendiri, listnya hampir selalu kosong
+        // karena aset/realisasi nyaris selalu menempel di prodi, bukan di unit fakultas.
+        $scopeUnitIds = collect([$unit->id])->merge($childUnits->pluck('id'))->unique()->values()->all();
+
         $pagu = Budget::where('unit_id', $unit->id)->where('fiscal_year', $year)->value('amount') ?? 0;
 
-        $assets = Asset::where('unit_id', $unit->id)
+        $assets = Asset::whereIn('unit_id', $scopeUnitIds)
             ->whereBetween('acquisition_date', $yearRange)
-            ->with('category')
+            ->with(['category', 'unit'])
             ->latest('acquisition_date')
             ->get();
 
-        $realizations = PurchaseRealization::where('unit_id', $unit->id)
+        $realizations = PurchaseRealization::whereIn('unit_id', $scopeUnitIds)
             ->whereBetween('purchase_date', $yearRange)
-            ->with('category')
+            ->with(['category', 'unit'])
             ->latest('purchase_date')
             ->get();
 
-        $requests = \App\Models\AssetRequest::where('unit_id', $unit->id)
+        $requests = \App\Models\AssetRequest::whereIn('unit_id', $scopeUnitIds)
             ->whereBetween('created_at', ["{$year}-01-01 00:00:00", "{$year}-12-31 23:59:59"])
-            ->with('category')
+            ->with(['category', 'unit'])
             ->latest()
             ->get();
 
@@ -142,8 +153,7 @@ class BudgetController extends Controller
         $totalRealisasi = $realisasiAset + $realisasiBelumFinal;
 
         $children = collect();
-        if ($unit->type === 'fakultas') {
-            $childUnits = Unit::where('parent_id', $unit->id)->orderBy('name')->get();
+        if ($isFakultas) {
             $childIds = $childUnits->pluck('id')->all();
             $childPaguMap = $this->paguMap($childIds, $year);
             $childRealisasiMap = $this->realisasiMap($childIds, $year);
@@ -154,6 +164,7 @@ class BudgetController extends Controller
         return view('budgets.show', [
             'unit' => $unit,
             'year' => $year,
+            'isFakultas' => $isFakultas,
             'availableYears' => range(now()->year + 1, now()->year - 3),
             'pagu' => $pagu,
             'realisasiAset' => $realisasiAset,
