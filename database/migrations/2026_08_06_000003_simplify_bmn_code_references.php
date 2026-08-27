@@ -10,6 +10,7 @@ return new class extends Migration
     {
         Schema::table('bmn_code_references', function (Blueprint $table) {
             $table->dropForeign(['parent_id']);
+            $table->dropIndex(['level']); // index eksplisit dari migrasi 000002 — SQLite error kalau kolomnya di-drop duluan
             $table->dropColumn(['parent_id', 'level', 'satuan', 'masa_manfaat_tahun']);
         });
     }
