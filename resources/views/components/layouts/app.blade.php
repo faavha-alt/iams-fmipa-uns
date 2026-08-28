@@ -29,13 +29,6 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3.5 7 8.5-4 8.5 4-8.5 4-8.5-4Z"/><path d="M3.5 7v10l8.5 4 8.5-4V7"/><path d="M12 11v10"/></svg>
                     Aset
                 </a>
-                <a href="{{ route('requests.index') }}" class="{{ request()->routeIs('requests.*') ? 'is-active' : '' }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="1.8"/><path d="M9 3v2h6V3M8.5 10h7M8.5 14h5" stroke-linecap="round"/></svg>
-                    Pengajuan
-                    @if ($pendingRequestCount > 0)
-                        <span class="nav-badge">{{ $pendingRequestCount }}</span>
-                    @endif
-                </a>
                 <a href="{{ route('locations.index') }}" class="{{ request()->routeIs('locations.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
                     Lokasi
@@ -56,6 +49,13 @@
                 @endif
 
                 <div class="sidebar__section">Pengadaan</div>
+                <a href="{{ route('requests.index') }}" class="{{ request()->routeIs('requests.*') ? 'is-active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="1.8"/><path d="M9 3v2h6V3M8.5 10h7M8.5 14h5" stroke-linecap="round"/></svg>
+                    Pengajuan
+                    @if ($pendingRequestCount > 0)
+                        <span class="nav-badge">{{ $pendingRequestCount }}</span>
+                    @endif
+                </a>
                 <a href="{{ route('procurement-batches.index') }}" class="{{ request()->routeIs('procurement-batches.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7h-9M14 17H5M5 7l3-3-3 3 3 3M20 17l-3 3 3-3-3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Pengadaan
