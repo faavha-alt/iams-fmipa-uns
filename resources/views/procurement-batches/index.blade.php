@@ -23,6 +23,63 @@
         </div>
     @endif
 
+    <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stat-card">
+            <div class="stat-card__value">{{ $stats['total_batches'] }}</div>
+            <div class="stat-card__label">Pengadaan</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">{{ number_format($stats['total_items'], 0, ',', '.') }}</div>
+            <div class="stat-card__label">Total Barang</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">Rp {{ number_format($stats['total_value'], 0, ',', '.') }}</div>
+            <div class="stat-card__label">Total Nilai Pengadaan</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card__value">{{ $stats['serapan_persen'] !== null ? $stats['serapan_persen'] . '%' : '—' }}</div>
+            <div class="stat-card__label">Serapan Pagu {{ $stats['year'] }}</div>
+        </div>
+    </div>
+
+    @if ($stats['pagu_tahun_ini'] > 0)
+        <p style="font-size: 0.8rem; color: var(--muted); margin: -8px 0 18px;">
+            Nilai pengadaan {{ $stats['year'] }}: <strong>Rp {{ number_format($stats['nilai_tahun_ini'], 0, ',', '.') }}</strong>
+            dari pagu <strong>Rp {{ number_format($stats['pagu_tahun_ini'], 0, ',', '.') }}</strong>.
+        </p>
+    @endif
+
+    @if ($stats['per_category']->isNotEmpty())
+        <div class="card">
+            <div class="card__header"><h2 class="card__title">Penyerapan Anggaran per Kategori Alat</h2></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kategori Alat</th>
+                        <th>Jumlah Barang</th>
+                        <th>Total Nilai</th>
+                        <th>% dari Total Pengadaan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach ($stats['per_category'] as $c)
+                        <tr>
+                            <td>{{ $c['nama'] }}</td>
+                            <td>{{ number_format($c['jumlah'], 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($c['nilai'], 0, ',', '.') }}</td>
+                            <td>
+                                <div class="bar-track" style="display:inline-block; width:90px; vertical-align:middle; margin-right:8px;">
+                                    <div class="bar-fill bar-fill--accent" style="width: {{ min(100, $c['persen']) }}%;"></div>
+                                </div>
+                                {{ $c['persen'] }}%
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     <div class="card">
         <form method="GET" action="{{ route('procurement-batches.index') }}" class="filters">
             <select name="status" onchange="this.form.submit()">
@@ -39,6 +96,7 @@
                 <thead>
                     <tr>
                         <th>Nama Periode</th>
+                        <th>Vendor / CV</th>
                         <th>Tanggal</th>
                         <th>Jumlah Realisasi</th>
                         <th>Total Nilai</th>
@@ -50,6 +108,7 @@
                     @foreach ($batches as $batch)
                         <tr>
                             <td>{{ $batch->nama }}</td>
+                            <td>{{ $batch->vendor?->name ?? '—' }}</td>
                             <td>
                                 {{ $batch->tanggal_mulai?->format('d M Y') ?? '-' }}
                                 @if ($batch->tanggal_selesai)

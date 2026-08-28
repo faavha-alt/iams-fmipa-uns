@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Budget;
 use App\Models\ProcurementBatch;
 use App\Models\PurchaseRealization;
+use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,6 +15,7 @@ class ProcurementBatchController extends Controller
     public function index(Request $request): View
     {
         $batches = ProcurementBatch::query()
+            ->with('vendor')
             ->withCount('realizations')
             ->withSum('realizations', 'cost')
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
@@ -23,7 +26,53 @@ class ProcurementBatchController extends Controller
         return view('procurement-batches.index', [
             'batches' => $batches,
             'orphanCount' => PurchaseRealization::whereNull('procurement_batch_id')->count(),
+            'stats' => $this->dashboardStats(),
         ]);
+    }
+
+    /**
+     * Ringkasan untuk header halaman daftar pengadaan: total nilai, jumlah barang,
+     * serapan terhadap pagu tahun berjalan, dan pecahan nilai per kategori alat.
+     */
+    private function dashboardStats(): array
+    {
+        $year = now()->year;
+        $totalValue = (float) PurchaseRealization::whereNotNull('procurement_batch_id')->sum('cost');
+
+        // Pagu total = jumlah pagu baris fakultas saja; di model anggaran, amount fakultas
+        // sudah mencakup alokasi prodi, jadi menjumlah semua baris Budget akan dobel.
+        $facultyIds = Unit::where('type', 'fakultas')->pluck('id');
+        $paguTahunIni = (float) Budget::where('fiscal_year', $year)
+            ->when($facultyIds->isNotEmpty(), fn ($q) => $q->whereIn('unit_id', $facultyIds))
+            ->sum('amount');
+        $nilaiTahunIni = (float) PurchaseRealization::whereNotNull('procurement_batch_id')
+            ->whereBetween('purchase_date', ["{$year}-01-01", "{$year}-12-31"])
+            ->sum('cost');
+
+        $perCategory = PurchaseRealization::whereNotNull('procurement_batch_id')
+            ->selectRaw('asset_category_id, COUNT(*) as jumlah, SUM(cost) as nilai')
+            ->groupBy('asset_category_id')
+            ->orderByDesc('nilai')
+            ->with('category')
+            ->limit(8)
+            ->get()
+            ->map(fn ($r) => [
+                'nama' => $r->category?->name ?? 'Tanpa kategori',
+                'jumlah' => (int) $r->jumlah,
+                'nilai' => (float) $r->nilai,
+                'persen' => $totalValue > 0 ? round((float) $r->nilai / $totalValue * 100, 1) : 0,
+            ]);
+
+        return [
+            'year' => $year,
+            'total_batches' => ProcurementBatch::count(),
+            'total_items' => PurchaseRealization::whereNotNull('procurement_batch_id')->count(),
+            'total_value' => $totalValue,
+            'pagu_tahun_ini' => $paguTahunIni,
+            'nilai_tahun_ini' => $nilaiTahunIni,
+            'serapan_persen' => $paguTahunIni > 0 ? round($nilaiTahunIni / $paguTahunIni * 100, 1) : null,
+            'per_category' => $perCategory,
+        ];
     }
 
     public function create(): View
