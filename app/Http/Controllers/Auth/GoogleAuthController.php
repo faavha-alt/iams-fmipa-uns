@@ -34,15 +34,34 @@ class GoogleAuthController extends Controller
         }
 
         if (! $user) {
-            $user = User::create([
-                'name' => $googleUser->getName() ?: $googleUser->getEmail(),
-                'email' => $googleUser->getEmail(),
+            $email = strtolower(trim($googleUser->getEmail() ?? ''));
+            $raw = $googleUser->getRaw() ?: $googleUser->user ?: [];
+            $verified = filter_var($raw['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            // Hanya pendaftaran mandiri (user baru) yang dibatasi. Email yang sudah terdaftar
+            // oleh admin, atau user yang tinggal menautkan google_id, tidak lewat sini.
+            if (! $verified) {
+                return redirect()->route('login')
+                    ->withErrors(['email' => 'Akun Google belum memverifikasi email. Gunakan email yang sudah terverifikasi.']);
+            }
+
+            if (! $this->isInstitutionalEmail($email)) {
+                return redirect()->route('login')
+                    ->withErrors(['email' => 'Pendaftaran mandiri hanya untuk email institusi (uns.ac.id). Hubungi admin jika perlu akun.']);
+            }
+
+            $user = new User([
+                'name' => $googleUser->getName() ?: $email,
+                'email' => $email,
                 'google_id' => $googleUser->getId(),
                 'password' => Hash::make(Str::random(40)),
-                'role' => 'staff',
-                'is_active' => true,
-                'is_approved' => false,
             ]);
+            // Kolom sensitif di-set eksplisit (tidak di $fillable) — user baru dari Google
+            // selalu role staff, aktif, menunggu persetujuan admin.
+            $user->role = 'staff';
+            $user->is_active = true;
+            $user->is_approved = false;
+            $user->save();
         }
 
         if (! $user->is_active) {
@@ -58,5 +77,13 @@ class GoogleAuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->intended(route('assets.index'));
+    }
+
+    /**
+     * Apakah email termasuk domain institusi kampus (mengizinkan subdomain student.*).
+     */
+    private function isInstitutionalEmail(string $email): bool
+    {
+        return (bool) preg_match('/@(?:student\.)?uns\.ac\.id$/i', trim($email));
     }
 }

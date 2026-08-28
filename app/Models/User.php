@@ -4,13 +4,11 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -18,15 +16,17 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * Get the attributes that should be cast.
+     * Kolom yang boleh diisi lewat mass-assignment.
+     *
+     * Kolom sensitif (role, is_active, is_approved, unit_id) SENGAJA TIDAK ada di sini agar
+     * tidak bisa ditimpa lewat request mass-assignment (pintu privilege escalation). Nilainya
+     * hanya di-set eksplisit di logika berotorisasi (UserController / GoogleAuthController).
      *
      * @return array<string, string>
      */
     protected $fillable = [
-    'name', 'email', 'password',
-    'unit_id', 'role', 'nip', 'phone', 'is_active',
-    'google_id', 'is_approved',
-];
+        'name', 'email', 'password', 'nip', 'phone', 'google_id',
+    ];
 
 protected $casts = [
     'email_verified_at' => 'datetime',

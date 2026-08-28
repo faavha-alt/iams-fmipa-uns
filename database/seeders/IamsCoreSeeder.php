@@ -133,12 +133,16 @@ class IamsCoreSeeder extends Seeder
         ]);
 
         // 4. Akun admin (GANTI PASSWORD SEBELUM PRODUKSI)
-        \App\Models\User::create([
+        $admin = \App\Models\User::create([
             'name' => 'Admin IAMS',
             'email' => 'admin@fmipa.uns.ac.id',
             'password' => 'password',
-            'role' => 'admin',
-            'unit_id' => $fmipa->id,
         ]);
+        // role/unit_id tidak ada di $fillable (anti mass-assignment) — set eksplisit.
+        $admin->role = 'admin';
+        $admin->unit_id = $fmipa->id;
+        $admin->is_active = true;
+        $admin->is_approved = true;
+        $admin->save();
     }
 }
