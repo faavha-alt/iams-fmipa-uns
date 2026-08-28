@@ -44,37 +44,44 @@ class BudgetController extends Controller
         $faculties = $facultiesCollection->map(function (Unit $fakultas) use ($paguMap, $realisasiMap, $childIdsByParent) {
             $childIds = $childIdsByParent[$fakultas->id] ?? [];
 
-            $pagu = $paguMap[$fakultas->id] ?? 0;
-            $dialokasikan = collect($childIds)->sum(fn ($id) => $paguMap[$id] ?? 0);
+            // Pagu total fakultas = alokasi yang dipegang fakultas sendiri (belanja langsung)
+            // + jumlah alokasi semua prodi di bawahnya. Bukan satu angka plafon dikurangi alokasi
+            // prodi — jadi tidak ada lagi konsep "sisa belum dialokasikan" yang bisa minus.
+            $alokasiFakultas = $paguMap[$fakultas->id] ?? 0;
+            $alokasiProdi = collect($childIds)->sum(fn ($id) => $paguMap[$id] ?? 0);
+            $paguTotal = $alokasiFakultas + $alokasiProdi;
+
             $realisasiSendiri = $realisasiMap[$fakultas->id] ?? 0;
             $realisasiAnak = collect($childIds)->sum(fn ($id) => $realisasiMap[$id] ?? 0);
             $totalRealisasi = $realisasiSendiri + $realisasiAnak;
 
             return [
                 'unit' => $fakultas,
-                'pagu' => $pagu,
-                'dialokasikan' => $dialokasikan,
-                'sisa_alokasi' => $pagu - $dialokasikan,
-                'over_alokasi' => $dialokasikan > $pagu,
+                'alokasi_fakultas' => $alokasiFakultas,
+                'alokasi_prodi' => $alokasiProdi,
+                'pagu_total' => $paguTotal,
                 'realisasi_sendiri' => $realisasiSendiri,
                 'realisasi_anak' => $realisasiAnak,
                 'total_realisasi' => $totalRealisasi,
-                'sisa_riil' => $pagu - $totalRealisasi,
-                'over_realisasi' => $totalRealisasi > $pagu,
-                'percent_alokasi' => $pagu > 0 ? min(100, round(($dialokasikan / $pagu) * 100)) : 0,
-                'percent_realisasi' => $pagu > 0 ? min(100, round(($totalRealisasi / $pagu) * 100)) : 0,
+                'sisa_riil' => $paguTotal - $totalRealisasi,
+                'over_realisasi' => $totalRealisasi > $paguTotal,
+                'percent_alokasi_prodi' => $paguTotal > 0 ? round(($alokasiProdi / $paguTotal) * 100) : 0,
+                'percent_realisasi' => $paguTotal > 0 ? min(100, round(($totalRealisasi / $paguTotal) * 100)) : 0,
             ];
         });
 
         $availableYears = range(now()->year + 1, now()->year - 3);
+
+        // Total pagu/realisasi = semua alokasi (prodi/unit + fakultas), tanpa dobel hitung.
+        $allBudgetUnitIds = $unitsCollection->pluck('id')->merge($facultiesCollection->pluck('id'))->unique();
 
         return view('budgets.index', [
             'units' => $units,
             'faculties' => $faculties,
             'year' => $year,
             'availableYears' => $availableYears,
-            'totalPagu' => $units->sum('pagu'),
-            'totalRealisasi' => $units->sum('realisasi'),
+            'totalPagu' => $allBudgetUnitIds->sum(fn ($id) => $paguMap[$id] ?? 0),
+            'totalRealisasi' => $allBudgetUnitIds->sum(fn ($id) => $realisasiMap[$id] ?? 0),
         ]);
     }
 
@@ -91,25 +98,8 @@ class BudgetController extends Controller
             ['amount' => $data['amount'], 'notes' => $data['notes'] ?? null, 'created_by' => $request->user()->id]
         );
 
-        $warning = null;
-        if ($unit->parent_id) {
-            $fakultasPagu = Budget::where('unit_id', $unit->parent_id)->where('fiscal_year', $data['fiscal_year'])->value('amount') ?? 0;
-            $siblingIds = Unit::where('parent_id', $unit->parent_id)->pluck('id');
-            $totalAlokasi = Budget::whereIn('unit_id', $siblingIds)->where('fiscal_year', $data['fiscal_year'])->sum('amount');
-
-            if ($fakultasPagu > 0 && $totalAlokasi > $fakultasPagu) {
-                $warning = 'Perhatian: total pagu semua prodi sekarang ('.number_format($totalAlokasi, 0, ',', '.').') sudah melebihi pagu fakultas ('.number_format($fakultasPagu, 0, ',', '.').').';
-            }
-        }
-
-        $redirect = redirect()->route('budgets.index', ['year' => $data['fiscal_year']])
+        return redirect()->route('budgets.index', ['year' => $data['fiscal_year']])
             ->with('message', "Pagu {$unit->name} tahun {$data['fiscal_year']} berhasil disimpan.");
-
-        if ($warning) {
-            $redirect->with('warning', $warning);
-        }
-
-        return $redirect;
     }
 
     public function show(Request $request, Unit $unit): View
@@ -154,6 +144,7 @@ class BudgetController extends Controller
 
         $children = collect();
         $recap = null;
+        $paguTotal = $pagu; // prodi/unit biasa: pagu unit itu sendiri
         if ($isFakultas) {
             $childIds = $childUnits->pluck('id')->all();
             $childPaguMap = $this->paguMap($childIds, $year);
@@ -161,18 +152,19 @@ class BudgetController extends Controller
 
             $children = $childUnits->map(fn (Unit $child) => $this->buildUnitRow($child, $childPaguMap, $childRealisasiMap));
 
-            // Rekap khusus fakultas: pisahkan belanja yang menempel langsung di unit fakultas
-            // (di luar prodi) dari belanja prodi, plus berapa pagu yang belum dialokasikan ke prodi.
+            // $pagu di sini = alokasi fakultas (belanja langsung). Pagu total fakultas = alokasi
+            // fakultas + jumlah alokasi semua prodi. Realisasi dipisah: langsung-fakultas vs prodi.
             $ownAssets = $assets->where('unit_id', $unit->id);
             $ownRealizations = $realizations->where('unit_id', $unit->id);
             $realisasiSendiri = $ownAssets->sum('acquisition_value')
                 + $ownRealizations->where('status', 'belum_final')->sum('cost');
-            $dialokasikan = collect($childPaguMap)->sum();
+            $alokasiProdi = collect($childPaguMap)->sum();
+            $paguTotal = $pagu + $alokasiProdi;
 
             $recap = [
-                'dialokasikan' => $dialokasikan,
-                'sisa_alokasi' => $pagu - $dialokasikan,
-                'over_alokasi' => $dialokasikan > $pagu,
+                'alokasi_fakultas' => $pagu,
+                'alokasi_prodi' => $alokasiProdi,
+                'pagu_total' => $paguTotal,
                 'realisasi_sendiri' => $realisasiSendiri,
                 'realisasi_prodi' => $totalRealisasi - $realisasiSendiri,
                 'aset_sendiri_count' => $ownAssets->count(),
@@ -185,11 +177,11 @@ class BudgetController extends Controller
             'year' => $year,
             'isFakultas' => $isFakultas,
             'availableYears' => range(now()->year + 1, now()->year - 3),
-            'pagu' => $pagu,
+            'pagu' => $paguTotal,
             'realisasiAset' => $realisasiAset,
             'realisasiBelumFinal' => $realisasiBelumFinal,
             'totalRealisasi' => $totalRealisasi,
-            'sisa' => $pagu - $totalRealisasi,
+            'sisa' => $paguTotal - $totalRealisasi,
             'assets' => $assets,
             'realizations' => $realizations,
             'requests' => $requests,

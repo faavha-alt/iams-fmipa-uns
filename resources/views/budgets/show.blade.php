@@ -38,20 +38,20 @@
 
     @if ($isFakultas && $recap)
         <div class="card">
-            <div class="card__header"><h2 class="card__title">Rekap Fakultas (belanja langsung, di luar prodi)</h2></div>
+            <div class="card__header"><h2 class="card__title">Rekap Anggaran Fakultas {{ $year }}</h2></div>
             <table>
                 <tbody>
                     <tr>
-                        <td>Pagu fakultas {{ $year }}</td>
-                        <td>Rp {{ number_format($pagu, 0, ',', '.') }}</td>
+                        <td>Alokasi prodi (jumlah pagu semua prodi)</td>
+                        <td>Rp {{ number_format($recap['alokasi_prodi'], 0, ',', '.') }}</td>
                     </tr>
                     <tr>
-                        <td>Dialokasikan ke prodi</td>
-                        <td>Rp {{ number_format($recap['dialokasikan'], 0, ',', '.') }}</td>
+                        <td>Alokasi fakultas (belanja langsung, di luar prodi)</td>
+                        <td>Rp {{ number_format($recap['alokasi_fakultas'], 0, ',', '.') }}</td>
                     </tr>
                     <tr>
-                        <td>Sisa pagu untuk fakultas (belum dialokasikan)</td>
-                        <td style="color: {{ $recap['over_alokasi'] ? 'var(--danger)' : 'var(--ink)' }};">Rp {{ number_format($recap['sisa_alokasi'], 0, ',', '.') }}</td>
+                        <td><strong>Pagu total fakultas</strong></td>
+                        <td><strong>Rp {{ number_format($recap['pagu_total'], 0, ',', '.') }}</strong></td>
                     </tr>
                     <tr>
                         <td>Realisasi belanja <strong>langsung fakultas</strong> ({{ $recap['aset_sendiri_count'] }} aset, {{ $recap['realisasi_sendiri_count'] }} realisasi)</td>
@@ -64,6 +64,10 @@
                     <tr>
                         <td><strong>Total realisasi fakultas</strong></td>
                         <td><strong>Rp {{ number_format($totalRealisasi, 0, ',', '.') }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>Sisa riil (pagu total − total realisasi)</td>
+                        <td style="color: {{ $sisa < 0 ? 'var(--danger)' : 'var(--ink)' }};">Rp {{ number_format($sisa, 0, ',', '.') }}</td>
                     </tr>
                 </tbody>
             </table>

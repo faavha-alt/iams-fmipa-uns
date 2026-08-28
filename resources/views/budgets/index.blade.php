@@ -54,29 +54,29 @@
 
             <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
-                    <div class="stat-card__value" style="font-size: 1.1rem;">Rp {{ number_format($f['pagu'], 0, ',', '.') }}</div>
-                    <div class="stat-card__label">Pagu Fakultas</div>
+                    <div class="stat-card__value" style="font-size: 1.1rem;">Rp {{ number_format($f['pagu_total'], 0, ',', '.') }}</div>
+                    <div class="stat-card__label">Pagu Total Fakultas</div>
                 </div>
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
-                    <div class="stat-card__value" style="font-size: 1.1rem;">Rp {{ number_format($f['dialokasikan'], 0, ',', '.') }}</div>
-                    <div class="stat-card__label">Dialokasikan ke Prodi</div>
+                    <div class="stat-card__value" style="font-size: 1.1rem;">Rp {{ number_format($f['alokasi_prodi'], 0, ',', '.') }}</div>
+                    <div class="stat-card__label">Alokasi Prodi</div>
                 </div>
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
-                    <div class="stat-card__value" style="font-size: 1.1rem; color: {{ $f['over_alokasi'] ? 'var(--danger)' : 'var(--navy)' }};">Rp {{ number_format($f['sisa_alokasi'], 0, ',', '.') }}</div>
-                    <div class="stat-card__label">Sisa Belum Dialokasikan</div>
+                    <div class="stat-card__value" style="font-size: 1.1rem; color: var(--navy);">Rp {{ number_format($f['alokasi_fakultas'], 0, ',', '.') }}</div>
+                    <div class="stat-card__label">Alokasi Fakultas (belanja langsung)</div>
                 </div>
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
                     <div class="stat-card__value" style="font-size: 1.1rem; color: {{ $f['over_realisasi'] ? 'var(--danger)' : 'var(--ok)' }};">Rp {{ number_format($f['sisa_riil'], 0, ',', '.') }}</div>
-                    <div class="stat-card__label">Sisa Riil (Pagu − Semua Realisasi)</div>
+                    <div class="stat-card__label">Sisa Riil (Pagu Total − Realisasi)</div>
                 </div>
             </div>
 
             <div class="bar-row">
-                <span class="bar-row__label">Alokasi ke prodi</span>
+                <span class="bar-row__label">Porsi alokasi prodi</span>
                 <div class="bar-track">
-                    <div class="bar-fill {{ $f['over_alokasi'] ? '' : 'bar-fill--accent' }}" style="width: {{ min(100, $f['percent_alokasi']) }}%; {{ $f['over_alokasi'] ? 'background: var(--danger);' : '' }}"></div>
+                    <div class="bar-fill bar-fill--accent" style="width: {{ min(100, $f['percent_alokasi_prodi']) }}%;"></div>
                 </div>
-                <span class="bar-row__value">{{ $f['percent_alokasi'] }}%</span>
+                <span class="bar-row__value">{{ $f['percent_alokasi_prodi'] }}%</span>
             </div>
             <div class="bar-row">
                 <span class="bar-row__label">Realisasi riil</span>
@@ -92,15 +92,16 @@
             </p>
 
             <details class="review-panel" style="padding: 0;">
-                <summary>Atur Pagu Fakultas</summary>
+                <summary>Atur Alokasi Fakultas</summary>
                 <div class="review-panel__body">
                     <form method="POST" action="{{ route('budgets.store', $f['unit']->id) }}">
                         @csrf
                         <input type="hidden" name="fiscal_year" value="{{ $year }}">
                         <div class="form-group" style="max-width: 280px;">
-                            <label>Pagu Fakultas {{ $year }} (Rp)</label>
-                            <input type="number" step="0.01" name="amount" value="{{ $f['pagu'] }}">
+                            <label>Alokasi Fakultas {{ $year }} — belanja langsung (Rp)</label>
+                            <input type="number" step="0.01" name="amount" value="{{ $f['alokasi_fakultas'] }}">
                         </div>
+                        <p style="font-size: 0.78rem; color: var(--muted); margin: 4px 0 10px;">Jatah belanja yang dipegang fakultas sendiri, di luar prodi. Pagu total fakultas = angka ini + jumlah pagu semua prodi.</p>
                         <button type="submit" class="btn btn-sm">Simpan</button>
                     </form>
                 </div>
