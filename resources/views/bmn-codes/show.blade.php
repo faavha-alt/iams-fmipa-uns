@@ -131,6 +131,10 @@
                 </tbody>
             </table>
             </div>
+
+            <div class="pagination">
+                {{ $assets->links() }}
+            </div>
         @endif
     </div>
 </x-layouts.app>

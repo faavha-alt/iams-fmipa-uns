@@ -11,6 +11,7 @@ use App\Models\PurchaseRealization;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -43,8 +44,10 @@ class RealizationController extends Controller
             'grouped' => $grouped,
             'year' => $year,
             'units' => Unit::orderBy('name')->get(),
-            'totalBelumFinal' => PurchaseRealization::whereBetween('purchase_date', $yearRange)->where('status', 'belum_final')->sum('cost'),
-            'totalSudahFinal' => PurchaseRealization::whereBetween('purchase_date', $yearRange)->where('status', 'sudah_final')->sum('cost'),
+            // Total dihitung dari koleksi $realizations yang sudah dimuat (2 query SUM terpisah
+            // dihapus). Sekaligus total jadi konsisten dengan filter yang sedang aktif.
+            'totalBelumFinal' => $realizations->where('status', 'belum_final')->sum('cost'),
+            'totalSudahFinal' => $realizations->where('status', 'sudah_final')->sum('cost'),
         ]);
     }
 
@@ -75,6 +78,7 @@ class RealizationController extends Controller
             'status' => 'belum_final',
             'recorded_by' => $request->user()->id,
         ]);
+        Cache::forget('procurement_dashboard_stats');
 
         return redirect()->route('realizations.index', ['year' => date('Y', strtotime($data['purchase_date']))])
             ->with('message', 'Barang berhasil dicatat. Sisa anggaran sudah ikut terpotong meskipun belum jadi record aset resmi.');
@@ -102,6 +106,7 @@ class RealizationController extends Controller
         unset($data['unit_price']);
 
         $realization->update([...$data, 'cost' => $cost]);
+        Cache::forget('procurement_dashboard_stats');
 
         return redirect()->route('realizations.index', ['year' => date('Y', strtotime($data['purchase_date']))])
             ->with('message', 'Barang berhasil diperbarui.');
@@ -113,6 +118,7 @@ class RealizationController extends Controller
 
         $year = $realization->purchase_date->year;
         $realization->delete();
+        Cache::forget('procurement_dashboard_stats');
 
         return redirect()->route('realizations.index', ['year' => $year])
             ->with('message', 'Barang berhasil dihapus, sisa anggaran sudah dikembalikan.');

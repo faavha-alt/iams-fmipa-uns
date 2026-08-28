@@ -188,6 +188,10 @@
                     </tbody>
                 </table>
                 </div>
+
+                <div class="pagination">
+                    {{ $assets->links() }}
+                </div>
             </form>
         @endif
     </div>

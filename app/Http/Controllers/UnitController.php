@@ -91,7 +91,8 @@ class UnitController extends Controller
             ->when($request->filled('condition'), fn ($q) => $q->where('assets.condition', $request->input('condition')))
             ->when($request->filled('status'), fn ($q) => $q->where('assets.status', $request->input('status')))
             ->orderBy($sortColumns[$sort], $direction)
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return view('units.show', [
             'unit' => $unit,

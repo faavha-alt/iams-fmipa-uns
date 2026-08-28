@@ -255,6 +255,12 @@ class AssetController extends Controller
         $vendors = [];
         $parsedRows = [];
 
+        // Pre-load master supaya tidak ada N+1 di loop baris (kategori/unit/lokasi sebelumnya
+        // di-query per baris). Untuk file ratusan-ribuan baris, ini memangkas ribuan query.
+        $categoriesByCode = AssetCategory::all()->keyBy('code');
+        $unitsByCode = Unit::all()->keyBy('code');
+        $locationsByUnitName = Location::all()->groupBy('unit_id')->map->keyBy('name');
+
         foreach ($rows as $i => $row) {
             $rowNumber = $i + 2;
 
@@ -277,8 +283,8 @@ class AssetController extends Controller
             $data = array_map(fn ($v) => trim((string) ($v ?? '')), $data);
 
             $errors = [];
-            $category = AssetCategory::where('code', $data['kategori_kode'] ?? '')->first();
-            $unit = Unit::where('code', $data['unit_kode'] ?? '')->first();
+            $category = $categoriesByCode[$data['kategori_kode'] ?? ''] ?? null;
+            $unit = $unitsByCode[$data['unit_kode'] ?? ''] ?? null;
 
             if (empty($data['nama_aset'])) {
                 $errors[] = 'Nama aset kosong.';
@@ -291,7 +297,7 @@ class AssetController extends Controller
             }
 
             $location = ($unit && ! empty($data['lokasi_nama']))
-                ? Location::where('name', $data['lokasi_nama'])->where('unit_id', $unit->id)->first()
+                ? ($locationsByUnitName[$unit->id][$data['lokasi_nama']] ?? null)
                 : null;
 
             $vendorRawName = trim($data['vendor_nama'] ?? '');

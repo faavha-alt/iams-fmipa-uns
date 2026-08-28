@@ -7,6 +7,7 @@ use App\Models\Asset;
 use App\Models\BmnCodeReference;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -42,18 +43,28 @@ class BmnCodeController extends Controller
 
         // Statistik ringkas — dihitung dari seluruh master kode BMN & aset, tidak ikut kepotong
         // pencarian di atas, supaya jadi gambaran utuh (mirip statistik di halaman Daftar Aset).
-        $totalCodes = BmnCodeReference::count();
-        $codesInUse = BmnCodeReference::has('assets')->count();
-        $totalAssets = Asset::count();
-        $assetsWithCode = Asset::whereNotNull('simak_kode_barang')->where('simak_kode_barang', '!=', '')->count();
-        $assetsWithoutCode = $totalAssets - $assetsWithCode;
+        // Di-cache 5 menit (bukan query penuh tiap request); di-flush saat kode BMN berubah.
+        $stats = Cache::remember('bmn_codes_stats', 300, function () {
+            $totalCodes = BmnCodeReference::count();
+            $codesInUse = BmnCodeReference::has('assets')->count();
+            $totalAssets = Asset::count();
+            $assetsWithCode = Asset::whereNotNull('simak_kode_barang')->where('simak_kode_barang', '!=', '')->count();
+
+            return [
+                'totalCodes' => $totalCodes,
+                'codesInUse' => $codesInUse,
+                'totalAssets' => $totalAssets,
+                'assetsWithCode' => $assetsWithCode,
+                'assetsWithoutCode' => $totalAssets - $assetsWithCode,
+            ];
+        });
 
         return view('bmn-codes.index', [
             'codes' => $codes,
-            'totalCodes' => $totalCodes,
-            'codesInUse' => $codesInUse,
-            'assetsWithCode' => $assetsWithCode,
-            'assetsWithoutCode' => $assetsWithoutCode,
+            'totalCodes' => $stats['totalCodes'],
+            'codesInUse' => $stats['codesInUse'],
+            'assetsWithCode' => $stats['assetsWithCode'],
+            'assetsWithoutCode' => $stats['assetsWithoutCode'],
             'sort' => $sort,
             'direction' => $direction,
         ]);
@@ -107,7 +118,8 @@ class BmnCodeController extends Controller
             ->when($request->filled('condition'), fn ($q) => $q->where('assets.condition', $request->input('condition')))
             ->when($request->filled('status'), fn ($q) => $q->where('assets.status', $request->input('status')))
             ->orderBy($sortColumns[$sort], $direction)
-            ->get();
+            ->paginate(20)
+            ->withQueryString();
 
         return view('bmn-codes.show', [
             'bmnCode' => $bmnCode,
@@ -152,6 +164,7 @@ class BmnCodeController extends Controller
     public function store(Request $request): RedirectResponse
     {
         BmnCodeReference::create($this->validated($request));
+        Cache::forget('bmn_codes_stats');
 
         return redirect()->route('bmn-codes.index')->with('message', 'Kode BMN baru berhasil ditambahkan.');
     }
@@ -164,6 +177,7 @@ class BmnCodeController extends Controller
     public function update(Request $request, BmnCodeReference $bmnCode): RedirectResponse
     {
         $bmnCode->update($this->validated($request, $bmnCode));
+        Cache::forget('bmn_codes_stats');
 
         return redirect()->route('bmn-codes.index')->with('message', 'Kode BMN berhasil diperbarui.');
     }
@@ -171,6 +185,7 @@ class BmnCodeController extends Controller
     public function destroy(BmnCodeReference $bmnCode): RedirectResponse
     {
         $bmnCode->delete(); // soft delete
+        Cache::forget('bmn_codes_stats');
 
         return redirect()->route('bmn-codes.index')->with('message', "{$bmnCode->kode} berhasil dihapus.");
     }
