@@ -247,7 +247,13 @@ class AssetController extends Controller
 
         $request->validate(['file' => 'required|file|mimes:xlsx,xls,csv,txt']);
 
-        $rows = $this->readSpreadsheetRows($request->file('file')->getRealPath());
+        try {
+            $rows = $this->readSpreadsheetRows($request->file('file')->getRealPath());
+        } catch (\Throwable $e) {
+            return redirect()->route('assets.import')
+                ->withErrors(['file' => 'File tidak bisa dibaca. Pastikan file .xlsx/.xls/.csv/.txt yang valid.']);
+        }
+
         $header = array_map(fn ($h) => trim((string) $h), array_shift($rows));
 
         $existingVendors = Vendor::orderBy('name')->get();
@@ -294,6 +300,9 @@ class AssetController extends Controller
             }
             if (! $unit) {
                 $errors[] = "Kode unit '{$data['unit_kode']}' tidak ditemukan.";
+            }
+            if (! empty($data['nilai_perolehan']) && ! is_numeric($data['nilai_perolehan'])) {
+                $errors[] = "Nilai perolehan '{$data['nilai_perolehan']}' harus berupa angka.";
             }
 
             $location = ($unit && ! empty($data['lokasi_nama']))
@@ -351,7 +360,7 @@ class AssetController extends Controller
                     'location_id' => $location?->id,
                     'acquisition_date' => $data['tanggal_perolehan'] ?: null,
                     'acquisition_source' => in_array($data['sumber_perolehan'], ['pengadaan', 'hibah', 'bantuan', 'lainnya']) ? $data['sumber_perolehan'] : 'pengadaan',
-                    'acquisition_value' => is_numeric($data['nilai_perolehan']) ? $data['nilai_perolehan'] : 0,
+                    'acquisition_value' => $data['nilai_perolehan'] !== '' ? $data['nilai_perolehan'] : 0,
                     'condition' => in_array($data['kondisi'], ['baik', 'rusak_ringan', 'rusak_berat', 'hilang']) ? $data['kondisi'] : 'baik',
                     'status' => in_array($data['status'], ['aktif', 'dalam_perbaikan', 'dipinjamkan', 'dihapuskan']) ? $data['status'] : 'aktif',
                     'simak_kode_barang' => $data['kode_barang_simak'] ?: null,

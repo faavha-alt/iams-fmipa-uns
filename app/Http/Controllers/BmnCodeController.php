@@ -221,7 +221,13 @@ class BmnCodeController extends Controller
     {
         $request->validate(['file' => 'required|file|mimes:xlsx,xls,csv,txt']);
 
-        $rows = $this->readSpreadsheetRows($request->file('file')->getRealPath());
+        try {
+            $rows = $this->readSpreadsheetRows($request->file('file')->getRealPath());
+        } catch (\Throwable $e) {
+            return redirect()->route('bmn-codes.import')
+                ->withErrors(['file' => 'File tidak bisa dibaca. Pastikan file .xlsx/.xls/.csv/.txt yang valid.']);
+        }
+
         $header = array_map(fn ($h) => trim((string) $h), array_shift($rows));
 
         $success = 0;
