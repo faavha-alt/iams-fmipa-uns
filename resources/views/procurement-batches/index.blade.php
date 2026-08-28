@@ -51,7 +51,7 @@
         </p>
     @endif
 
-    @if ($stats['per_category']->isNotEmpty())
+    @if (! empty($stats['per_category']))
         <div class="card">
             <div class="card__header"><h2 class="card__title">Penyerapan Anggaran per Kategori Alat</h2></div>
             <div class="table-responsive">

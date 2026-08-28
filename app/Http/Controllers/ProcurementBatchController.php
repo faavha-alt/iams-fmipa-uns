@@ -71,7 +71,11 @@ class ProcurementBatchController extends Controller
                     'jumlah' => (int) $r->jumlah,
                     'nilai' => (float) $r->nilai,
                     'persen' => $totalValue > 0 ? round((float) $r->nilai / $totalValue * 100, 1) : 0,
-                ]);
+                ])
+                // Konversi ke plain array: menyimpan Eloquent Collection ke cache di shared hosting
+                // memicu "incomplete object" saat unserialize (class Collection belum ter-load) → 500.
+                ->values()
+                ->all();
 
             return [
                 'year' => $year,
