@@ -44,12 +44,12 @@ class BudgetController extends Controller
         $faculties = $facultiesCollection->map(function (Unit $fakultas) use ($paguMap, $realisasiMap, $childIdsByParent) {
             $childIds = $childIdsByParent[$fakultas->id] ?? [];
 
-            // Pagu total fakultas = alokasi yang dipegang fakultas sendiri (belanja langsung)
-            // + jumlah alokasi semua prodi di bawahnya. Bukan satu angka plafon dikurangi alokasi
-            // prodi — jadi tidak ada lagi konsep "sisa belum dialokasikan" yang bisa minus.
-            $alokasiFakultas = $paguMap[$fakultas->id] ?? 0;
+            // Pagu total fakultas = angka yang diinput di baris Budget fakultas. Angka itu SUDAH
+            // mencakup alokasi prodi + alokasi fakultas. Jadi alokasi fakultas (belanja langsung)
+            // = pagu total - jumlah alokasi prodi. Ini alokasi yang disengaja, bukan "sisa".
+            $paguTotal = $paguMap[$fakultas->id] ?? 0;
             $alokasiProdi = collect($childIds)->sum(fn ($id) => $paguMap[$id] ?? 0);
-            $paguTotal = $alokasiFakultas + $alokasiProdi;
+            $alokasiFakultas = $paguTotal - $alokasiProdi;
 
             $realisasiSendiri = $realisasiMap[$fakultas->id] ?? 0;
             $realisasiAnak = collect($childIds)->sum(fn ($id) => $realisasiMap[$id] ?? 0);
@@ -57,31 +57,29 @@ class BudgetController extends Controller
 
             return [
                 'unit' => $fakultas,
-                'alokasi_fakultas' => $alokasiFakultas,
-                'alokasi_prodi' => $alokasiProdi,
                 'pagu_total' => $paguTotal,
+                'alokasi_prodi' => $alokasiProdi,
+                'alokasi_fakultas' => $alokasiFakultas,
+                'over_alokasi' => $alokasiProdi > $paguTotal, // alokasi prodi melebihi pagu total → alokasi_fakultas minus
                 'realisasi_sendiri' => $realisasiSendiri,
                 'realisasi_anak' => $realisasiAnak,
                 'total_realisasi' => $totalRealisasi,
                 'sisa_riil' => $paguTotal - $totalRealisasi,
                 'over_realisasi' => $totalRealisasi > $paguTotal,
-                'percent_alokasi_prodi' => $paguTotal > 0 ? round(($alokasiProdi / $paguTotal) * 100) : 0,
+                'percent_alokasi_prodi' => $paguTotal > 0 ? min(100, round(($alokasiProdi / $paguTotal) * 100)) : 0,
                 'percent_realisasi' => $paguTotal > 0 ? min(100, round(($totalRealisasi / $paguTotal) * 100)) : 0,
             ];
         });
 
         $availableYears = range(now()->year + 1, now()->year - 3);
 
-        // Total pagu/realisasi = semua alokasi (prodi/unit + fakultas), tanpa dobel hitung.
-        $allBudgetUnitIds = $unitsCollection->pluck('id')->merge($facultiesCollection->pluck('id'))->unique();
-
         return view('budgets.index', [
             'units' => $units,
             'faculties' => $faculties,
             'year' => $year,
             'availableYears' => $availableYears,
-            'totalPagu' => $allBudgetUnitIds->sum(fn ($id) => $paguMap[$id] ?? 0),
-            'totalRealisasi' => $allBudgetUnitIds->sum(fn ($id) => $realisasiMap[$id] ?? 0),
+            'totalPagu' => $faculties->sum('pagu_total') ?: $units->sum('pagu'),
+            'totalRealisasi' => $faculties->sum('total_realisasi') ?: $units->sum('realisasi'),
         ]);
     }
 
@@ -144,7 +142,6 @@ class BudgetController extends Controller
 
         $children = collect();
         $recap = null;
-        $paguTotal = $pagu; // prodi/unit biasa: pagu unit itu sendiri
         if ($isFakultas) {
             $childIds = $childUnits->pluck('id')->all();
             $childPaguMap = $this->paguMap($childIds, $year);
@@ -152,19 +149,20 @@ class BudgetController extends Controller
 
             $children = $childUnits->map(fn (Unit $child) => $this->buildUnitRow($child, $childPaguMap, $childRealisasiMap));
 
-            // $pagu di sini = alokasi fakultas (belanja langsung). Pagu total fakultas = alokasi
-            // fakultas + jumlah alokasi semua prodi. Realisasi dipisah: langsung-fakultas vs prodi.
+            // $pagu di baris Budget fakultas = pagu total (sudah mencakup alokasi prodi + fakultas).
+            // Alokasi fakultas (belanja langsung) = pagu total - jumlah alokasi prodi.
+            // Realisasi dipisah: yang menempel langsung di unit fakultas vs yang di prodi.
             $ownAssets = $assets->where('unit_id', $unit->id);
             $ownRealizations = $realizations->where('unit_id', $unit->id);
             $realisasiSendiri = $ownAssets->sum('acquisition_value')
                 + $ownRealizations->where('status', 'belum_final')->sum('cost');
             $alokasiProdi = collect($childPaguMap)->sum();
-            $paguTotal = $pagu + $alokasiProdi;
 
             $recap = [
-                'alokasi_fakultas' => $pagu,
+                'pagu_total' => $pagu,
                 'alokasi_prodi' => $alokasiProdi,
-                'pagu_total' => $paguTotal,
+                'alokasi_fakultas' => $pagu - $alokasiProdi,
+                'over_alokasi' => $alokasiProdi > $pagu,
                 'realisasi_sendiri' => $realisasiSendiri,
                 'realisasi_prodi' => $totalRealisasi - $realisasiSendiri,
                 'aset_sendiri_count' => $ownAssets->count(),
@@ -177,11 +175,11 @@ class BudgetController extends Controller
             'year' => $year,
             'isFakultas' => $isFakultas,
             'availableYears' => range(now()->year + 1, now()->year - 3),
-            'pagu' => $paguTotal,
+            'pagu' => $pagu,
             'realisasiAset' => $realisasiAset,
             'realisasiBelumFinal' => $realisasiBelumFinal,
             'totalRealisasi' => $totalRealisasi,
-            'sisa' => $paguTotal - $totalRealisasi,
+            'sisa' => $pagu - $totalRealisasi,
             'assets' => $assets,
             'realizations' => $realizations,
             'requests' => $requests,

@@ -62,8 +62,8 @@
                     <div class="stat-card__label">Alokasi Prodi</div>
                 </div>
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
-                    <div class="stat-card__value" style="font-size: 1.1rem; color: var(--navy);">Rp {{ number_format($f['alokasi_fakultas'], 0, ',', '.') }}</div>
-                    <div class="stat-card__label">Alokasi Fakultas (belanja langsung)</div>
+                    <div class="stat-card__value" style="font-size: 1.1rem; color: {{ $f['over_alokasi'] ? 'var(--danger)' : 'var(--navy)' }};">Rp {{ number_format($f['alokasi_fakultas'], 0, ',', '.') }}</div>
+                    <div class="stat-card__label">Alokasi Fakultas (pagu total − alokasi prodi)</div>
                 </div>
                 <div class="stat-card" style="box-shadow: none; border: 1px solid var(--border); padding: 14px;">
                     <div class="stat-card__value" style="font-size: 1.1rem; color: {{ $f['over_realisasi'] ? 'var(--danger)' : 'var(--ok)' }};">Rp {{ number_format($f['sisa_riil'], 0, ',', '.') }}</div>
@@ -92,16 +92,16 @@
             </p>
 
             <details class="review-panel" style="padding: 0;">
-                <summary>Atur Alokasi Fakultas</summary>
+                <summary>Atur Pagu Fakultas</summary>
                 <div class="review-panel__body">
                     <form method="POST" action="{{ route('budgets.store', $f['unit']->id) }}">
                         @csrf
                         <input type="hidden" name="fiscal_year" value="{{ $year }}">
                         <div class="form-group" style="max-width: 280px;">
-                            <label>Alokasi Fakultas {{ $year }} — belanja langsung (Rp)</label>
-                            <input type="number" step="0.01" name="amount" value="{{ $f['alokasi_fakultas'] }}">
+                            <label>Pagu Total Fakultas {{ $year }} (Rp)</label>
+                            <input type="number" step="0.01" name="amount" value="{{ $f['pagu_total'] }}">
                         </div>
-                        <p style="font-size: 0.78rem; color: var(--muted); margin: 4px 0 10px;">Jatah belanja yang dipegang fakultas sendiri, di luar prodi. Pagu total fakultas = angka ini + jumlah pagu semua prodi.</p>
+                        <p style="font-size: 0.78rem; color: var(--muted); margin: 4px 0 10px;">Angka ini mencakup alokasi prodi + belanja langsung fakultas. Alokasi fakultas dihitung otomatis = pagu total − jumlah pagu semua prodi.</p>
                         <button type="submit" class="btn btn-sm">Simpan</button>
                     </form>
                 </div>

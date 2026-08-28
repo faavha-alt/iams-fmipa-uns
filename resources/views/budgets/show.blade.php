@@ -42,16 +42,16 @@
             <table>
                 <tbody>
                     <tr>
-                        <td>Alokasi prodi (jumlah pagu semua prodi)</td>
+                        <td><strong>Pagu total fakultas</strong></td>
+                        <td><strong>Rp {{ number_format($recap['pagu_total'], 0, ',', '.') }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;&nbsp;− Alokasi prodi (jumlah pagu semua prodi)</td>
                         <td>Rp {{ number_format($recap['alokasi_prodi'], 0, ',', '.') }}</td>
                     </tr>
                     <tr>
-                        <td>Alokasi fakultas (belanja langsung, di luar prodi)</td>
-                        <td>Rp {{ number_format($recap['alokasi_fakultas'], 0, ',', '.') }}</td>
-                    </tr>
-                    <tr>
-                        <td><strong>Pagu total fakultas</strong></td>
-                        <td><strong>Rp {{ number_format($recap['pagu_total'], 0, ',', '.') }}</strong></td>
+                        <td>&nbsp;&nbsp;= Alokasi fakultas (belanja langsung, di luar prodi)</td>
+                        <td style="color: {{ $recap['over_alokasi'] ? 'var(--danger)' : 'var(--ink)' }};">Rp {{ number_format($recap['alokasi_fakultas'], 0, ',', '.') }}@if ($recap['over_alokasi']) <span class="badge badge-rusak_berat">alokasi prodi melebihi pagu</span>@endif</td>
                     </tr>
                     <tr>
                         <td>Realisasi belanja <strong>langsung fakultas</strong> ({{ $recap['aset_sendiri_count'] }} aset, {{ $recap['realisasi_sendiri_count'] }} realisasi)</td>
