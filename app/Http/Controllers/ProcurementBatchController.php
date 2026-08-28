@@ -87,7 +87,7 @@ class ProcurementBatchController extends Controller
 
         ProcurementBatch::create($data);
 
-        return redirect()->route('procurement-batches.index')->with('message', 'Periode pengadaan baru berhasil dibuat.');
+        return redirect()->route('procurement-batches.index')->with('message', 'Pengadaan baru berhasil dibuat.');
     }
 
     public function edit(ProcurementBatch $procurementBatch): View
@@ -99,7 +99,7 @@ class ProcurementBatchController extends Controller
     {
         $procurementBatch->update($this->validated($request));
 
-        return redirect()->route('procurement-batches.index')->with('message', 'Periode pengadaan berhasil diperbarui.');
+        return redirect()->route('procurement-batches.index')->with('message', 'Pengadaan berhasil diperbarui.');
     }
 
     public function show(Request $request, ProcurementBatch $procurementBatch): View
@@ -124,9 +124,9 @@ class ProcurementBatchController extends Controller
     }
 
     /**
-     * Tarik realisasi yang belum punya periode (final maupun belum) ke periode ini.
+     * Tarik realisasi yang belum punya pengadaan (final maupun belum) ke pengadaan ini.
      * Sengaja terpisah dari update() biasa supaya bisa dipakai walau realisasinya sudah final
-     * (assign ke periode itu cuma pengelompokan administratif, bukan perubahan data keuangan).
+     * (assign ke pengadaan itu cuma pengelompokan administratif, bukan perubahan data keuangan).
      */
     public function attachRealizations(Request $request, ProcurementBatch $procurementBatch): RedirectResponse
     {
@@ -140,7 +140,7 @@ class ProcurementBatchController extends Controller
             ->update(['procurement_batch_id' => $procurementBatch->id]);
 
         return redirect()->route('procurement-batches.show', $procurementBatch->id)
-            ->with('message', "{$count} realisasi berhasil ditambahkan ke periode ini.");
+            ->with('message', "{$count} realisasi berhasil ditambahkan ke pengadaan ini.");
     }
 
     private function validated(Request $request): array

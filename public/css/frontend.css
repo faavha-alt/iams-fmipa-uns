@@ -277,6 +277,10 @@ td .cell-dim { color: var(--muted); }
 /* Bungkus tabel supaya di layar sempit scroll ke samping, bukan merusak layout halaman */
 .table-responsive { width: 100%; overflow-x: auto; }
 
+/* Baris tabel yang bisa diklik membuka detail */
+.row-click tbody tr { cursor: pointer; }
+.row-click tbody tr td:first-child a { font-weight: 600; }
+
 /* Tabel Aset: lebar kolom proporsional + potong teks kepanjangan supaya rapi */
 .table-assets { table-layout: fixed; min-width: 760px; }
 .table-assets th, .table-assets td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

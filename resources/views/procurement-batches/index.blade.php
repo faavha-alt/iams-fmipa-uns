@@ -19,7 +19,7 @@
 
     @if ($orphanCount > 0)
         <div class="alert-success" style="background: var(--gold-pale); color: #92660F; border-left-color: var(--gold);">
-            Ada <strong>{{ $orphanCount }}</strong> realisasi belanja yang belum masuk periode manapun. Buka salah satu periode di bawah, lalu tambahkan lewat panel "Tambahkan Realisasi yang Sudah Ada".
+            Ada <strong>{{ $orphanCount }}</strong> realisasi belanja yang belum masuk pengadaan manapun. Buka salah satu pengadaan di bawah, lalu tambahkan lewat panel "Tambahkan Realisasi yang Sudah Ada".
         </div>
     @endif
 
@@ -92,16 +92,17 @@
         </form>
 
         @if ($batches->count() === 0)
-            <div class="empty-state">Belum ada periode pengadaan. Buat satu buat mulai mengelompokkan realisasi belanja.</div>
+            <div class="empty-state">Belum ada pengadaan. Buat satu buat mulai mengelompokkan realisasi belanja.</div>
         @else
             <div class="table-responsive">
-            <table>
+            <table class="table-batches row-click">
                 <thead>
                     <tr>
-                        <th>Nama Periode</th>
+                        <th>Nama Pengadaan</th>
                         <th>Vendor / CV</th>
+                        <th class="nowrap">No. Dokumen</th>
                         <th class="nowrap">Tanggal</th>
-                        <th class="num">Barang</th>
+                        <th class="num">Jumlah</th>
                         <th class="num">Total Nilai</th>
                         <th>Status</th>
                         <th></th>
@@ -109,9 +110,10 @@
                 </thead>
                 <tbody>
                     @foreach ($batches as $batch)
-                        <tr>
+                        <tr data-href="{{ route('procurement-batches.show', $batch->id) }}">
                             <td>{{ $batch->nama }}</td>
                             <td>@if ($batch->vendor){{ $batch->vendor->name }}@else<span class="cell-dim">—</span>@endif</td>
+                            <td class="nowrap">@if ($batch->nomor_dokumen){{ $batch->nomor_dokumen }}@else<span class="cell-dim">—</span>@endif</td>
                             <td class="nowrap">
                                 {{ $batch->tanggal_mulai?->format('d M Y') ?? '-' }}
                                 @if ($batch->tanggal_selesai)
@@ -148,4 +150,14 @@
             </div>
         @endif
     </div>
+
+    <script>
+        // Baris tabel bisa diklik untuk membuka detail pengadaan
+        document.addEventListener('click', function (e) {
+            var row = e.target.closest('tr[data-href]');
+            if (!row) return;
+            if (e.target.closest('a, button, input, select, form')) return; // jangan ganggu aksi lain
+            window.location.href = row.dataset.href;
+        });
+    </script>
 </x-layouts.app>

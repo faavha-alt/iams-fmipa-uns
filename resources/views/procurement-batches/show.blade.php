@@ -23,7 +23,7 @@
         <div class="card" style="background: var(--gold-pale);">
             <div class="card__header"><h2 class="card__title">Tambahkan Realisasi yang Sudah Ada</h2></div>
             <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 14px;">
-                Realisasi di bawah ini belum masuk periode manapun (termasuk yang statusnya sudah final) — centang yang mau ditarik ke periode ini.
+                Realisasi di bawah ini belum masuk pengadaan manapun (termasuk yang statusnya sudah final) — centang yang mau ditarik ke pengadaan ini.
             </p>
             <form method="POST" action="{{ route('procurement-batches.attach', $batch->id) }}">
                 @csrf
@@ -63,7 +63,7 @@
                         </tbody>
                     </table>
                 </div>
-                <button type="submit" class="btn btn-sm">Tambahkan yang Dicentang ke Periode Ini</button>
+                <button type="submit" class="btn btn-sm">Tambahkan yang Dicentang ke Pengadaan Ini</button>
             </form>
         </div>
     @endif
@@ -80,14 +80,15 @@
                     {{ $items->count() }} item · Rp {{ number_format($items->sum('cost'), 0, ',', '.') }}
                 </span>
             </div>
+            <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
                         <th>Barang</th>
                         <th>Kategori</th>
                         <th>Unit Pemesan</th>
-                        <th>Jumlah</th>
-                        <th>Biaya</th>
+                        <th class="num">Jumlah</th>
+                        <th class="num">Biaya</th>
                         <th>Tanggal</th>
                         <th>Status</th>
                         <th></th>
@@ -128,6 +129,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div class="card" style="background: var(--navy); color: white;">

@@ -37,23 +37,26 @@
     <div class="card">
         <form method="GET" action="{{ route('realizations.index') }}" class="filters">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama barang...">
-            <select name="year" onchange="this.form.submit()">
+            <select name="year">
                 @foreach (range(now()->year + 1, now()->year - 3) as $y)
                     <option value="{{ $y }}" @selected($y == $year)>Tahun {{ $y }}</option>
                 @endforeach
             </select>
-            <select name="unit_id" onchange="this.form.submit()">
+            <select name="unit_id">
                 <option value="">Semua Unit</option>
                 @foreach ($units as $unit)
                     <option value="{{ $unit->id }}" @selected(request('unit_id') == $unit->id)>{{ $unit->name }}</option>
                 @endforeach
             </select>
-            <select name="status" onchange="this.form.submit()">
+            <select name="status">
                 <option value="">Semua Status</option>
                 <option value="belum_final" @selected(request('status') == 'belum_final')>Belum Final</option>
                 <option value="sudah_final" @selected(request('status') == 'sudah_final')>Sudah Final</option>
             </select>
             <button type="submit" class="btn btn-outline btn-sm">Cari</button>
+            @if (request()->has('search') || request()->filled('unit_id') || request()->filled('status') || request()->has('year'))
+                <a href="{{ route('realizations.index') }}" class="btn btn-sm">Reset</a>
+            @endif
         </form>
     </div>
 
@@ -72,15 +75,16 @@
                 </summary>
 
                 <div style="padding: 0 22px 20px;">
+                    <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
                                 <th>Tanggal</th>
                                 <th>Barang</th>
                                 <th>Unit</th>
-                                <th>Jml</th>
-                                <th>Biaya</th>
-                                <th>Periode</th>
+                                <th class="num">Jumlah</th>
+                                <th class="num">Biaya</th>
+                                <th>Pengadaan</th>
                                 <th>Status</th>
                                 <th></th>
                             </tr>
@@ -133,6 +137,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </details>
         @endforeach
