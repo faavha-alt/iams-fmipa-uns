@@ -115,6 +115,17 @@ a { color: var(--cerulean); }
     font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 999px;
 }
 
+/* Label grup pada navigasi samping — memisahkan area (Utama, Manajemen Aset, Pengadaan, dsb) */
+.sidebar__section {
+    padding: 16px 12px 5px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.09em; text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+}
+.sidebar__nav > .sidebar__section:first-child { padding-top: 2px; }
+.sidebar__section + .sidebar__section { border-top: 1px solid rgba(255,255,255,0.06); margin-top: 8px; }
+
+
 .sidebar__user {
     border-top: 1px solid rgba(255,255,255,0.1);
     margin-top: 12px;
@@ -558,6 +569,7 @@ td .cell-dim { color: var(--muted); }
     .sidebar { width: 100%; height: auto; position: static; flex-direction: row; align-items: center; padding: 12px 16px; overflow-x: auto; }
     .sidebar__brand::after { display: none; }
     .sidebar__nav { flex-direction: row; }
+    .sidebar__section { display: none; } /* label grup disembunyikan saat nav jadi horizontal */
     .sidebar__user { flex-direction: row; align-items: center; border-top: none; border-left: 1px solid rgba(255,255,255,0.1); padding: 0 0 0 14px; margin-left: auto; }
     .sidebar__logout-form { margin-top: 0; margin-left: 8px; }
     .content__body { padding: 20px; }
