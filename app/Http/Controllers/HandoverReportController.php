@@ -2,15 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RetriesUniqueConstraint;
 use App\Models\Asset;
 use App\Models\HandoverReport;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class HandoverReportController extends Controller
 {
+    use RetriesUniqueConstraint;
+
     public function index(Request $request): View
     {
         $reports = HandoverReport::query()
@@ -53,15 +57,21 @@ class HandoverReportController extends Controller
         $validAssetIds = $this->availableAssetsForUnit($unit)->whereIn('id', $data['asset_ids'])->pluck('id');
         abort_if($validAssetIds->isEmpty(), 422, 'Barang yang dipilih tidak valid.');
 
-        $report = HandoverReport::create([
-            ...collect($data)->except('asset_ids')->toArray(),
-            'nomor_bast' => HandoverReport::generateNomor(),
-            'unit_id' => $unit->id,
-            'status' => 'draft',
-            'created_by' => $request->user()->id,
-        ]);
+        // Pembuatan BAST (termasuk generate nomor) dibungkus transaksi + retry agar tidak
+        // ada BAST parsial dan nomor bentrok (UNIQUE) saat dua request dibuat bersamaan.
+        $this->retryOnUniqueViolation(function () use ($request, $unit, $data, $validAssetIds, &$report) {
+            DB::transaction(function () use ($request, $unit, $data, $validAssetIds, &$report) {
+                $report = HandoverReport::create([
+                    ...collect($data)->except('asset_ids')->toArray(),
+                    'nomor_bast' => HandoverReport::generateNomor(),
+                    'unit_id' => $unit->id,
+                    'status' => 'draft',
+                    'created_by' => $request->user()->id,
+                ]);
 
-        $report->assets()->attach($validAssetIds);
+                $report->assets()->attach($validAssetIds);
+            });
+        });
 
         return redirect()->route('handover-reports.show', $report->id)->with('message', 'BAST berhasil dibuat. Silakan cetak untuk ditandatangani.');
     }

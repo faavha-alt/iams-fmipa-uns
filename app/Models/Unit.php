@@ -70,11 +70,13 @@ class Unit extends Model
         ];
 
         $prefix = $prefixes[$type] ?? 'UNIT';
-        $sequence = static::where('type', $type)->count() + 1;
+        // withTrashed: kolom code UNIQUE tetap berlaku untuk baris soft-deleted, jadi kode
+        // unit yang sudah dihapus harus ikut dihitung/dihindari agar tidak bentrok.
+        $sequence = static::withTrashed()->where('type', $type)->count() + 1;
         $code = sprintf('%s-%03d', $prefix, $sequence);
 
         // Jaga-jaga kalau ada bentrok (misal setelah unit lama dihapus), naikkan urutan sampai aman.
-        while (static::where('code', $code)->exists()) {
+        while (static::withTrashed()->where('code', $code)->exists()) {
             $sequence++;
             $code = sprintf('%s-%03d', $prefix, $sequence);
         }

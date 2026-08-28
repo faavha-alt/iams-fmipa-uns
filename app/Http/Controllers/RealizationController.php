@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RetriesUniqueConstraint;
 use App\Models\Asset;
 use App\Models\AssetCategory;
 use App\Models\Location;
@@ -10,10 +11,13 @@ use App\Models\PurchaseRealization;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class RealizationController extends Controller
 {
+    use RetriesUniqueConstraint;
+
     public function index(Request $request): View
     {
         $year = (int) $request->input('year', now()->year);
@@ -138,31 +142,38 @@ class RealizationController extends Controller
             'status' => 'required|in:aktif,dalam_perbaikan,dipinjamkan,dihapuskan',
         ]);
 
-        $unitPrice = $realization->quantity > 0 ? $realization->cost / $realization->quantity : $realization->cost;
+        // Seluruh pembuatan aset + update status dijalankan dalam satu transaksi DB dan
+        // di-retry bila kena konflik UNIQUE kode aset (race saat dua finalisasi bersamaan).
+        // Rollback otomatis oleh transaksi memastikan tidak ada aset parsial/duplikat.
+        $this->retryOnUniqueViolation(function () use ($realization, $data) {
+            DB::transaction(function () use ($realization, $data) {
+                $unitPrice = $realization->quantity > 0 ? $realization->cost / $realization->quantity : $realization->cost;
 
-        // Vendor diambil dari Pengadaan induknya. Kalau realisasi lama belum punya Pengadaan
-        // (dari sebelum perubahan ini), fallback ke vendor_id lama di barangnya sendiri.
-        $vendorId = $realization->procurementBatch?->vendor_id ?? $realization->vendor_id;
+                // Vendor diambil dari Pengadaan induknya. Kalau realisasi lama belum punya Pengadaan
+                // (dari sebelum perubahan ini), fallback ke vendor_id lama di barangnya sendiri.
+                $vendorId = $realization->procurementBatch?->vendor_id ?? $realization->vendor_id;
 
-        for ($i = 0; $i < $realization->quantity; $i++) {
-            Asset::create([
-                'purchase_realization_id' => $realization->id,
-                'name' => $realization->item_name,
-                'brand' => $data['brand'] ?? null,
-                'model' => $data['model'] ?? null,
-                'asset_category_id' => $data['asset_category_id'],
-                'unit_id' => $realization->unit_id,
-                'location_id' => $data['location_id'] ?? null,
-                'acquisition_date' => $realization->purchase_date,
-                'acquisition_source' => 'pengadaan',
-                'vendor_id' => $vendorId,
-                'acquisition_value' => $unitPrice,
-                'condition' => $data['condition'],
-                'status' => $data['status'],
-            ]);
-        }
+                for ($i = 0; $i < $realization->quantity; $i++) {
+                    Asset::create([
+                        'purchase_realization_id' => $realization->id,
+                        'name' => $realization->item_name,
+                        'brand' => $data['brand'] ?? null,
+                        'model' => $data['model'] ?? null,
+                        'asset_category_id' => $data['asset_category_id'],
+                        'unit_id' => $realization->unit_id,
+                        'location_id' => $data['location_id'] ?? null,
+                        'acquisition_date' => $realization->purchase_date,
+                        'acquisition_source' => 'pengadaan',
+                        'vendor_id' => $vendorId,
+                        'acquisition_value' => $unitPrice,
+                        'condition' => $data['condition'],
+                        'status' => $data['status'],
+                    ]);
+                }
 
-        $realization->update(['status' => 'sudah_final']);
+                $realization->update(['status' => 'sudah_final']);
+            });
+        });
 
         $label = $realization->quantity > 1 ? "{$realization->quantity} aset" : '1 aset';
 
