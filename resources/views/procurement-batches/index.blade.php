@@ -100,8 +100,6 @@
                     <tr>
                         <th>Nama Pengadaan</th>
                         <th>Vendor / CV</th>
-                        <th class="nowrap">No. Dokumen</th>
-                        <th class="nowrap">Tanggal</th>
                         <th class="num">Jumlah</th>
                         <th class="num">Total Nilai</th>
                         <th>Status</th>
@@ -113,13 +111,6 @@
                         <tr data-href="{{ route('procurement-batches.show', $batch->id) }}">
                             <td>{{ $batch->nama }}</td>
                             <td>@if ($batch->vendor){{ $batch->vendor->name }}@else<span class="cell-dim">—</span>@endif</td>
-                            <td class="nowrap">@if ($batch->nomor_dokumen){{ $batch->nomor_dokumen }}@else<span class="cell-dim">—</span>@endif</td>
-                            <td class="nowrap">
-                                {{ $batch->tanggal_mulai?->format('d M Y') ?? '-' }}
-                                @if ($batch->tanggal_selesai)
-                                    &ndash; {{ $batch->tanggal_selesai->format('d M Y') }}
-                                @endif
-                            </td>
                             <td class="num">{{ number_format($batch->realizations_count, 0, ',', '.') }}</td>
                             <td class="num">Rp {{ number_format($batch->realizations_sum_cost ?? 0, 0, ',', '.') }}</td>
                             <td>
