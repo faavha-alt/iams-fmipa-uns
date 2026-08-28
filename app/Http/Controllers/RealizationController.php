@@ -131,9 +131,17 @@ class RealizationController extends Controller
     {
         $this->abortIfFinalized($realization);
 
+        // Semua lokasi lintas unit ditampilkan (bukan cuma milik unit realisasi), karena ada
+        // barang yang dibeli pakai dana fakultas untuk kebutuhan prodi — ruangannya milik prodi,
+        // bukan fakultas. Formnya bisa diketik untuk mencari ruangan (lihat .select-search).
+        $locations = Location::with('unit')
+            ->get()
+            ->sortBy(fn (Location $l) => mb_strtolower(($l->unit?->name ?? 'zzz').' '.$l->name))
+            ->values();
+
         return view('realizations.finalize', [
             'realization' => $realization,
-            'locations' => Location::where('unit_id', $realization->unit_id)->orderBy('name')->get(),
+            'locations' => $locations,
             'categories' => AssetCategory::orderBy('name')->get(),
         ]);
     }

@@ -31,23 +31,31 @@
                     @error('asset_category_id') <div class="form-error">{{ $message }}</div> @enderror
                 </div>
                 <div class="form-group">
-                    <label>Lokasi</label>
+                    <label>Lokasi (opsional)</label>
                     @if ($locations->count() === 0)
                         <select name="location_id" disabled>
-                            <option>-- Unit ini belum punya lokasi terdaftar --</option>
+                            <option>-- Belum ada lokasi terdaftar --</option>
                         </select>
                         <p style="font-size: 0.78rem; color: var(--danger); margin-top: 4px;">
-                            Belum ada lokasi untuk {{ $realization->unit->name }}.
+                            Belum ada lokasi/ruangan sama sekali.
                             <a href="{{ route('locations.create') }}" target="_blank">Tambah lokasi dulu →</a>
                             (lokasi opsional, boleh dilewati dan diisi belakangan lewat halaman Edit Aset)
                         </p>
                     @else
-                        <select name="location_id">
-                            <option value="">-- Pilih Lokasi --</option>
-                            @foreach ($locations as $location)
-                                <option value="{{ $location->id }}" @selected(old('location_id') == $location->id)>{{ $location->name }}</option>
-                            @endforeach
-                        </select>
+                        <div class="select-search">
+                            <input type="text" class="select-search__filter" placeholder="Ketik untuk cari ruangan / prodi…" autocomplete="off" aria-label="Cari lokasi">
+                            <select name="location_id">
+                                <option value="">-- Pilih Lokasi --</option>
+                                @foreach ($locations->groupBy(fn ($l) => $l->unit?->name ?? 'Tanpa unit') as $unitName => $locs)
+                                    <optgroup label="{{ $unitName }}">
+                                        @foreach ($locs as $location)
+                                            <option value="{{ $location->id }}" @selected(old('location_id') == $location->id)>{{ $location->name }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
+                        </div>
+                        <p style="font-size: 0.78rem; color: var(--muted); margin-top: 4px;">Semua ruangan lintas prodi ditampilkan — barang dari dana fakultas untuk kebutuhan prodi tetap bisa dipetakan ke ruangan prodinya.</p>
                     @endif
                 </div>
             </div>

@@ -73,3 +73,38 @@ document.querySelectorAll('.typeahead').forEach(function (wrapper) {
 
     input.addEventListener('blur', hideResults);
 });
+
+// Select yang bisa disaring: <div class="select-search"><input class="select-search__filter"><select>...</select></div>
+// Ketik di input untuk menyaring <option>/<optgroup> di <select> bawahnya. Murni client-side,
+// nilai yang dikirim tetap <option value> (id), bukan teks. Dipakai di form finalisasi (cari ruangan).
+document.querySelectorAll('.select-search').forEach(function (wrapper) {
+    var filter = wrapper.querySelector('.select-search__filter');
+    var select = wrapper.querySelector('select');
+    if (!filter || !select) {
+        return;
+    }
+
+    var groups = Array.prototype.slice.call(select.querySelectorAll('optgroup'));
+    var options = Array.prototype.slice.call(select.querySelectorAll('option'));
+
+    filter.addEventListener('input', function () {
+        var query = filter.value.trim().toLowerCase();
+
+        options.forEach(function (option) {
+            if (!option.value) {
+                return; // biarkan placeholder "-- Pilih Lokasi --"
+            }
+            var haystack = (option.textContent + ' ' + (option.parentNode.label || '')).toLowerCase();
+            option.hidden = query !== '' && haystack.indexOf(query) === -1;
+        });
+
+        groups.forEach(function (group) {
+            group.hidden = !Array.prototype.slice.call(group.children).some(function (o) { return !o.hidden; });
+        });
+
+        var current = select.options[select.selectedIndex];
+        if (current && current.hidden) {
+            select.value = '';
+        }
+    });
+});
