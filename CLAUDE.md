@@ -57,10 +57,11 @@ Tidak ada file routing terpisah per modul — semua di `routes/web.php`, dikelom
 
 ### Role & Akses
 Kolom `users.role` (enum): `admin`, `kepala_unit`, `staff`, `pimpinan`.
-- **admin**: akses penuh ke semua modul
-- **kepala_unit / staff**: pengaju dari unit masing-masing — cuma lihat data unit sendiri, bisa ajukan permintaan aset
-- **pimpinan**: ada di enum tapi belum ada logika/otorisasi khusus di kode — perlakuannya masih sama seperti non-admin biasa (perlu diperjelas kalau mau dipakai beneran)
-- Middleware custom: `App\Http\Middleware\EnsureUserIsAdmin` (alias `admin`, cek `role === 'admin'`)
+- **admin (operator)**: akses penuh — Satu-satunya role yang boleh MENGELOLA (membuat/mengedit/menghapus/menfinalisasi/mengunggah, dst.). Rute tulis semua ada di grup middleware `admin`.
+- **kepala_unit / staff**: HANYA MELIHAT (read-only). Data di-scope ke **unit sendiri** — tidak bisa membuka unit lain. Bisa mengajukan permintaan aset (`requests.*`).
+- **pimpinan**: HANYA MELIHAT, tapi **semua unit** (porsi laporan/reviewer), tidak bisa mengelola.
+- Kebijakan ini dijalankan lewat trait `App\Concerns\RestrictsByRole` (`canSeeAllUnits()`, `canAccessUnit()`, `restrictByRole()`) + pemisahan rute di `routes/web.php`: rute LIHAT (index/show/dbr/print) ada di grup `auth`, rute TULIS ada di grup `admin`.
+- Middleware custom: `EnsureUserIsAdmin` (alias `admin`, cek `role === 'admin'`) untuk rute tulis; `EnsureUserIsActive` (cek `is_active`/`is_approved` per-request, bukan cuma saat login).
 
 ### Situs Publik vs Aplikasi (login)
 - `/` (nama rute `home`) adalah **halaman depan publik** — beranda informatif (statistik ringkas tanpa nilai rupiah, pengumuman terbaru, link dokumentasi), TIDAK butuh login, di-handle `PublicController`. Login **bukan** lagi di `/`, tapi di `/login` sendiri (link "Masuk" di navbar situs publik).
@@ -118,6 +119,7 @@ Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari for
 - **Locale tanggal**: `config/app.php` / `.env` harus `APP_LOCALE=id` supaya `Carbon::translatedFormat()` keluar bahasa Indonesia. **Sudah pernah kejadian**: `.env` sempat punya dua baris `APP_LOCALE` (satu `en`, satu `id`) — nilai yang kepakai adalah yang PERTAMA muncul di file (perilaku phpdotenv), jadi baris kedua diam-diam tidak berlaku. Kalau curiga locale tidak jalan, cek dulu ada duplikat key atau tidak: `grep -n APP_LOCALE .env`.
 - **`APP_ENV`/`APP_DEBUG` di server sempat kebawa nilai default lokal** (`local`/`true`) padahal domain sudah live publik — bahaya karena `APP_DEBUG=true` membocorkan stack trace. Sudah diperbaiki ke `production`/`false`, tapi cek ulang tiap kali `.env` server disentuh manual.
 - **RedirectResponse tidak punya method `when()`** — itu method Query Builder/Collection, jangan dipakai di redirect chain.
+- **`Cache::remember` JANGAN menyimpan Eloquent Collection** — di shared hosting, cache dibaca lewat `unserialize()` sebelum class `Illuminate\Support\Collection` ter-load → error "call a method on an incomplete object" → HTTP 500 (pernah terjadi di halaman Daftar Pengadaan setelah statistik agregat di-cache). Kalau hasilnya kumpulan data agregat, konversi ke **plain array** (`->values()->all()` / `->toArray()`) SEBELUM di-cache.
 - **Hapus data via database langsung (phpMyAdmin) melewati semua safeguard aplikasi** (termasuk soft delete) — SELALU lewat halaman aplikasi, jangan pernah hapus manual di DB kecuali darurat.
 
 ## Yang Belum Dikerjakan / Ide Lanjutan
@@ -128,3 +130,39 @@ Jangan bikin ulang field vendor di level barang — itu SENGAJA dihapus dari for
 - Foto aset (upload gambar per aset, belum ada)
 - Garansi aset (belum ada kolom)
 - Isi konten halaman `/dokumentasi` (masih placeholder "segera hadir", belum ada panduan per-role beneran)
+
+## Changelog / Riwayat Perubahan
+
+Catatan kerja dari sesi review & perbaikan aplikasi (lihat juga `CODE_REVIEW.md` untuk temuan lengkapnya).
+
+### 2026-08-28 — Review kode menyeluruh + perbaikan kelompok A–E, menu, & bug
+Dimulai dari review seluruh aplikasi (controller, model, routes, migration, test) lewat workflow paralel → laporan `CODE_REVIEW.md`. Lalu diterapkan perbaikan per kelompok:
+
+- **Kelompok A — Integritas data (race condition & transaksi)**
+  - `RealizationController::finalize` dibungkus `DB::transaction()` → tidak ada aset parsial/duplikat saat gagal.
+  - Trait baru `App\Concerns\RetriesUniqueConstraint` — retry otomatis saat kena konflik UNIQUE (kode aset, nomor BAST) untuk menangani race dua proses bersamaan. Dipakai di `finalize` & `HandoverReportController::store`.
+  - `Unit::generateCode()` kini pakai `withTrashed()` agar tidak bentrok kode dengan unit soft-deleted.
+- **Kelompok B — Keamanan**
+  - Throttle login (`throttle:5,1`) di rute `login.authenticate`.
+  - Google self-registration dibatasi ke domain `@uns.ac.id` / `@student.uns.ac.id` + wajib `email_verified`.
+  - Middleware baru `EnsureUserIsActive` — cek `is_active`/`is_approved` per-request (didaftarkan di grup `web`), bukan cuma saat login.
+  - `User::$fillable` dipersempit (hapus `role`, `is_active`, `is_approved`, `unit_id` — kolom sensitif kini di-set eksplisit di `UserController`/`GoogleAuthController`/seeder). Hapus duplikat attribute `#[Fillable]`.
+- **Kelompok C — Kinerja**
+  - Hilangkan N+1 di `AssetController::preview` (pre-load kategori/unit/lokasi ke koleksi).
+  - Paginate detail aset di `Unit`, `Location`, `BmnCode` (`show` → `paginate` + `->links()` di view).
+  - Cache statistik agregat (5 menit) di `ProcurementBatchController::dashboardStats` & `BmnCodeController::index`, + flush saat mutasi.
+  - Hapus 2 query SUM redundan di `RealizationController::index` (hitung dari koleksi yang sudah dimuat).
+- **Kelompok D — Robustness import**
+  - `ImportsSpreadsheet`: `toArray(..., calculateFormulas=false)` (cegah formula injection & SSRF), sanitasi sel berawalan `=+-@`, bungkus baca file dalam try/catch → `RuntimeException` ramah. Pemanggil (`AssetController::preview`, `BmnCodeController::import`) menangkap & redirect dengan pesan.
+  - `nilai_perolehan` non-angka dijadikan error baris (tidak lagi diam-diam jadi 0).
+- **Kelompok E — Otorisasi bisnis**
+  - Kebijakan: **hanya admin yang mengelola; role lain hanya melihat** (kepala_unit/staff scoped ke unit sendiri, pimpinan melihat semua).
+  - Trait `App\Concerns\RestrictsByRole`; rute dipecah lihat vs tulis di `routes/web.php`; scoping di controller; UI read-only (12 view) — tombol kelola disembunyikan utk non-admin. Helper `User::isAdmin()`.
+  - Hapus route `announcements.show` yang menunjuk ke method tak ada.
+- **Menu & navigasi**
+  - Sidebar dikelompokkan menjadi seksi: **Manajemen Aset** (Aset, Lokasi, BAST, Kategori*, Kode BMN*), **Pengadaan** (Pengajuan, Pengadaan, Barang Pengadaan, Anggaran, Vendor*), **Referensi** (Program Studi, Pengumuman), **Administrasi*** (Pengguna, Pengaturan). Item `*` khusus admin. Menu Pengajuan dipindah ke seksi Pengadaan. Modul read-only kini tampil untuk non-admin. Label grup disembunyikan di mobile.
+- **Bug fix** — Error 500 di `/procurement-batches`: statistik `per_category` di-cache sebagai Eloquent Collection → "incomplete object" di shared hosting. Diperbaiki dengan menyimpan sebagai plain array + sesuaikan view (`! empty(...)`).
+
+### Test otomatis (ditambahkan)
+- `tests/Unit/RetriesUniqueConstraintTest.php` — trait retry (retry, rethrow non-unique, menyerah setelah max).
+- `tests/Unit/ImportsSpreadsheetTest.php` — sanitizer sel + exception ramah utk file rusak.
