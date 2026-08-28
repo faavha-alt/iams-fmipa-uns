@@ -231,6 +231,16 @@ tbody tr:hover td { background: #F8FAFC; }
 td a { font-size: 12.5px; text-decoration: none; color: var(--cerulean); font-weight: 500; }
 td a:hover { text-decoration: underline; }
 
+/* Kolom angka: rata kanan + digit sejajar supaya nominal gampang dibandingkan */
+th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.num { font-family: var(--font-mono); }
+.nowrap { white-space: nowrap; }
+td .cell-dim { color: var(--muted); }
+/* Bar mini di dalam sel tabel (mis. persentase) */
+.cell-bar { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.cell-bar .bar-track { width: 84px; flex-shrink: 0; }
+.cell-bar__val { min-width: 46px; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
 /* Header kolom yang bisa diklik buat sorting */
 .sort-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
 .sort-link:hover { color: var(--cerulean); }

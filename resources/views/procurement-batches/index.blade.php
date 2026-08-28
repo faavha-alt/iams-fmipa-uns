@@ -52,31 +52,33 @@
     @if ($stats['per_category']->isNotEmpty())
         <div class="card">
             <div class="card__header"><h2 class="card__title">Penyerapan Anggaran per Kategori Alat</h2></div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Kategori Alat</th>
-                        <th>Jumlah Barang</th>
-                        <th>Total Nilai</th>
-                        <th>% dari Total Pengadaan</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($stats['per_category'] as $c)
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td>{{ $c['nama'] }}</td>
-                            <td>{{ number_format($c['jumlah'], 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($c['nilai'], 0, ',', '.') }}</td>
-                            <td>
-                                <div class="bar-track" style="display:inline-block; width:90px; vertical-align:middle; margin-right:8px;">
-                                    <div class="bar-fill bar-fill--accent" style="width: {{ min(100, $c['persen']) }}%;"></div>
-                                </div>
-                                {{ $c['persen'] }}%
-                            </td>
+                            <th>Kategori Alat</th>
+                            <th class="num">Barang</th>
+                            <th class="num">Total Nilai</th>
+                            <th class="num">% Total</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach ($stats['per_category'] as $c)
+                            <tr>
+                                <td>{{ $c['nama'] }}</td>
+                                <td class="num">{{ number_format($c['jumlah'], 0, ',', '.') }}</td>
+                                <td class="num">Rp {{ number_format($c['nilai'], 0, ',', '.') }}</td>
+                                <td class="num">
+                                    <div class="cell-bar">
+                                        <div class="bar-track"><div class="bar-fill bar-fill--accent" style="width: {{ min(100, $c['persen']) }}%;"></div></div>
+                                        <span class="cell-bar__val">{{ $c['persen'] }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     @endif
 
@@ -92,14 +94,15 @@
         @if ($batches->count() === 0)
             <div class="empty-state">Belum ada periode pengadaan. Buat satu buat mulai mengelompokkan realisasi belanja.</div>
         @else
+            <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
                         <th>Nama Periode</th>
                         <th>Vendor / CV</th>
-                        <th>Tanggal</th>
-                        <th>Jumlah Realisasi</th>
-                        <th>Total Nilai</th>
+                        <th class="nowrap">Tanggal</th>
+                        <th class="num">Barang</th>
+                        <th class="num">Total Nilai</th>
                         <th>Status</th>
                         <th></th>
                     </tr>
@@ -108,15 +111,15 @@
                     @foreach ($batches as $batch)
                         <tr>
                             <td>{{ $batch->nama }}</td>
-                            <td>{{ $batch->vendor?->name ?? '—' }}</td>
-                            <td>
+                            <td>@if ($batch->vendor){{ $batch->vendor->name }}@else<span class="cell-dim">—</span>@endif</td>
+                            <td class="nowrap">
                                 {{ $batch->tanggal_mulai?->format('d M Y') ?? '-' }}
                                 @if ($batch->tanggal_selesai)
                                     &ndash; {{ $batch->tanggal_selesai->format('d M Y') }}
                                 @endif
                             </td>
-                            <td>{{ $batch->realizations_count }}</td>
-                            <td>Rp {{ number_format($batch->realizations_sum_cost ?? 0, 0, ',', '.') }}</td>
+                            <td class="num">{{ number_format($batch->realizations_count, 0, ',', '.') }}</td>
+                            <td class="num">Rp {{ number_format($batch->realizations_sum_cost ?? 0, 0, ',', '.') }}</td>
                             <td>
                                 @if ($batch->status === 'selesai')
                                     <span class="badge badge-baik">Selesai</span>
@@ -138,6 +141,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
 
             <div class="pagination">
                 {{ $batches->links() }}
