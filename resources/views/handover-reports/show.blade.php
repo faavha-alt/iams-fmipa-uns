@@ -6,7 +6,7 @@
             <p>{{ $report->unit->name }} — {{ $report->tanggal_serah_terima->format('d M Y') }}</p>
         </div>
         <div style="display:flex; gap:8px;">
-            @if ($report->status === 'draft')
+            @if (auth()->user()->isAdmin() && $report->status === 'draft')
                 <a href="{{ route('handover-reports.edit', $report->id) }}" class="btn btn-outline">✏ Edit</a>
             @endif
             <a href="{{ route('handover-reports.print', $report->id) }}" target="_blank" class="btn btn-outline">🖨 Cetak</a>
@@ -70,6 +70,7 @@
             <p style="font-size: 0.85rem; color: var(--muted); margin-bottom: 14px;">
                 Cetak BAST dulu (tombol di atas), tanda tangani kedua pihak, scan, lalu upload di sini. Setelah upload, BAST tidak bisa diedit lagi.
             </p>
+            @if (auth()->user()->isAdmin())
             <form method="POST" action="{{ route('handover-reports.upload-scan', $report->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="form-group">
@@ -78,6 +79,7 @@
                 </div>
                 <button type="submit" class="btn">Upload & Jadikan Final</button>
             </form>
+            @endif
         @endif
     </div>
 </x-layouts.app>

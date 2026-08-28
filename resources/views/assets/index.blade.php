@@ -5,7 +5,7 @@
             <h1>Daftar Aset</h1>
             <p>{{ $isAdmin ? 'Seluruh unit di FMIPA UNS.' : 'Aset yang tercatat di unit Anda: ' . auth()->user()->unit?->name }}</p>
         </div>
-        @if ($isAdmin)
+        @if (auth()->user()->isAdmin())
             <a href="{{ route('assets.import') }}" class="btn btn-outline">⬆ Import CSV</a>
             <a href="{{ route('assets.create') }}" class="btn">+ Tambah Aset</a>
         @endif
@@ -128,7 +128,7 @@
                         <th class="col-location">Lokasi</th>
                         <th class="col-badge">Kondisi</th>
                         <th class="col-badge">Status</th>
-                        @if ($isAdmin)
+                        @if (auth()->user()->isAdmin())
                             <th class="col-actions"></th>
                         @endif
                     </tr>
@@ -146,7 +146,7 @@
                             <td class="col-location">{{ $asset->location?->name ?? '-' }}</td>
                             <td class="col-badge"><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
                             <td class="col-badge"><span class="badge badge-{{ $asset->status }}">{{ str_replace('_', ' ', $asset->status) }}</span></td>
-                            @if ($isAdmin)
+                            @if (auth()->user()->isAdmin())
                                 <td class="col-actions">
                                     <div class="row-actions">
                                         <a href="{{ route('assets.edit', $asset->id) }}" class="icon-btn" title="Edit" aria-label="Edit">

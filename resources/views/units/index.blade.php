@@ -5,7 +5,9 @@
             <h1>Program Studi & Unit</h1>
             <p>Struktur fakultas, departemen, program studi, dan laboratorium.</p>
         </div>
-        <a href="{{ route('units.create') }}" class="btn">+ Tambah Unit</a>
+        @if (auth()->user()->isAdmin())
+            <a href="{{ route('units.create') }}" class="btn">+ Tambah Unit</a>
+        @endif
     </div>
 
     @if (session('message'))
@@ -69,6 +71,7 @@
                                 @endif
                             </td>
                             <td>
+                                @if (auth()->user()->isAdmin())
                                 <div class="row-actions">
                                     <a href="{{ route('units.show', $unit->id) }}" class="icon-btn" title="Lihat Detail" aria-label="Lihat Detail">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -90,6 +93,7 @@
                                         </button>
                                     </form>
                                 </div>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

@@ -5,7 +5,9 @@
             <h1>Daftar Pengadaan</h1>
             <p>Tiap pengadaan punya satu vendor dan daftar barangnya sendiri.</p>
         </div>
-        <a href="{{ route('procurement-batches.create') }}" class="btn">+ Buat Pengadaan</a>
+        @if (auth()->user()->isAdmin())
+            <a href="{{ route('procurement-batches.create') }}" class="btn">+ Buat Pengadaan</a>
+        @endif
     </div>
 
     <div style="display:flex; gap:6px; margin-bottom: 20px;">
@@ -121,6 +123,7 @@
                                 @endif
                             </td>
                             <td>
+                                @if (auth()->user()->isAdmin())
                                 <div class="row-actions">
                                     <a href="{{ route('procurement-batches.show', $batch->id) }}" class="icon-btn" title="Lihat" aria-label="Lihat">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -129,6 +132,7 @@
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     </a>
                                 </div>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

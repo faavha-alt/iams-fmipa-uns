@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Models\Asset;
 use App\Models\Budget;
 use App\Models\PurchaseRealization;
@@ -12,6 +13,8 @@ use Illuminate\View\View;
 
 class BudgetController extends Controller
 {
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $year = (int) $request->input('year', now()->year);
@@ -22,6 +25,14 @@ class BudgetController extends Controller
             ->get();
 
         $facultiesCollection = Unit::where('type', 'fakultas')->orderBy('name')->get();
+
+        // Non-admin (kepala_unit/staff) hanya melihat unit miliknya sendiri.
+        if (! $this->canSeeAllUnits()) {
+            $uid = auth()->user()->unit_id;
+            $unitsCollection = $unitsCollection->filter(fn (Unit $u) => $u->id === $uid);
+            $facultiesCollection = $facultiesCollection->filter(fn (Unit $u) => $u->id === $uid);
+        }
+
         $facultyIds = $facultiesCollection->pluck('id')->all();
 
         $childUnits = $facultyIds ? Unit::whereIn('parent_id', $facultyIds)->get(['id', 'parent_id']) : collect();
@@ -102,6 +113,8 @@ class BudgetController extends Controller
 
     public function show(Request $request, Unit $unit): View
     {
+        abort_unless($this->canAccessUnit($unit), 403, 'Anda tidak berhak melihat anggaran unit ini.');
+
         $year = (int) $request->input('year', now()->year);
         $yearRange = ["{$year}-01-01", "{$year}-12-31"];
 

@@ -41,15 +41,33 @@ Route::get('/dokumentasi', [PublicController::class, 'documentation'])->name('do
 Route::get('/pengumuman', [AnnouncementController::class, 'publicIndex'])->name('announcements.public-index');
 Route::get('/pengumuman/{announcement}', [AnnouncementController::class, 'publicShow'])->name('announcements.public-show');
 
+// ===== Area login =====
+// Kebijakan otorisasi: admin/operator boleh MENGELOLA (tulis) semua modul; role lain
+// (kepala_unit/staff/pimpinan) hanya MELIHAT, dan data di-scope per unit (lihat trait
+// RestrictsByRole). Rute lihat (index/show/dbr/print) ada di grup auth; rute tulis di
+// grup admin. Urutan penting: rute static (create) didaftarkan SEBELUM rute {param} show
+// supaya 'create' tidak tertangkap sebagai id model.
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/assets', [AssetController::class, 'index'])->name('assets.index');
+
     Route::get('/requests', [AssetRequestController::class, 'index'])->name('requests.index');
     Route::get('/requests/create', [AssetRequestController::class, 'create'])->name('requests.create');
     Route::post('/requests', [AssetRequestController::class, 'store'])->name('requests.store');
 
+    // ---- Lihat (read-only; scoping per role di controller) ----
+    Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
+    Route::get('/realizations', [RealizationController::class, 'index'])->name('realizations.index');
+    Route::get('/procurement-batches', [ProcurementBatchController::class, 'index'])->name('procurement-batches.index');
+    Route::get('/units', [UnitController::class, 'index'])->name('units.index');
+    Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
+    Route::get('/handover-reports', [HandoverReportController::class, 'index'])->name('handover-reports.index');
+    Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+
+    // ---- Kelola & tulis (admin/operator saja) ----
     Route::middleware('admin')->group(function () {
+        // Assets
         Route::get('/assets/create', [AssetController::class, 'create'])->name('assets.create');
         Route::get('/assets/import', [AssetController::class, 'importForm'])->name('assets.import');
         Route::get('/assets/import/template', [AssetController::class, 'downloadTemplate'])->name('assets.import.template');
@@ -64,10 +82,9 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/requests/{assetRequest}/decide', [AssetRequestController::class, 'decide'])->name('requests.decide');
 
-        Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
-        Route::get('/budgets/{unit}', [BudgetController::class, 'show'])->name('budgets.show');
         Route::post('/budgets/{unit}', [BudgetController::class, 'store'])->name('budgets.store');
 
+        // Users (kelola akun — admin saja)
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
@@ -75,16 +92,15 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
 
-        Route::get('/units', [UnitController::class, 'index'])->name('units.index');
+        // Units (tulis)
         Route::get('/units/create', [UnitController::class, 'create'])->name('units.create');
         Route::post('/units', [UnitController::class, 'store'])->name('units.store');
         Route::get('/units/{unit}/edit', [UnitController::class, 'edit'])->name('units.edit');
-        Route::get('/units/{unit}', [UnitController::class, 'show'])->name('units.show');
         Route::put('/units/{unit}', [UnitController::class, 'update'])->name('units.update');
         Route::post('/units/{unit}/toggle-active', [UnitController::class, 'toggleActive'])->name('units.toggle-active');
         Route::delete('/units/{unit}', [UnitController::class, 'destroy'])->name('units.destroy');
 
-        Route::get('/realizations', [RealizationController::class, 'index'])->name('realizations.index');
+        // Realizations (tulis)
         Route::get('/realizations/create', [RealizationController::class, 'create'])->name('realizations.create');
         Route::post('/realizations', [RealizationController::class, 'store'])->name('realizations.store');
         Route::get('/realizations/{realization}/edit', [RealizationController::class, 'edit'])->name('realizations.edit');
@@ -93,6 +109,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/realizations/{realization}/finalize', [RealizationController::class, 'finalizeForm'])->name('realizations.finalize-form');
         Route::post('/realizations/{realization}/finalize', [RealizationController::class, 'finalize'])->name('realizations.finalize');
 
+        // Categories (master data)
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
         Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
         Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
@@ -100,6 +117,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/categories/{category}', [CategoryController::class, 'update'])->name('categories.update');
         Route::delete('/categories/{category}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
+        // Vendors (master data)
         Route::get('/vendors', [VendorController::class, 'index'])->name('vendors.index');
         Route::get('/vendors/create', [VendorController::class, 'create'])->name('vendors.create');
         Route::post('/vendors', [VendorController::class, 'store'])->name('vendors.store');
@@ -108,15 +126,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/vendors/{vendor}/toggle-active', [VendorController::class, 'toggleActive'])->name('vendors.toggle-active');
         Route::delete('/vendors/{vendor}', [VendorController::class, 'destroy'])->name('vendors.destroy');
 
-        Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');
+        // Locations (tulis)
         Route::get('/locations/create', [LocationController::class, 'create'])->name('locations.create');
         Route::post('/locations', [LocationController::class, 'store'])->name('locations.store');
-        Route::get('/locations/{location}/dbr', [LocationController::class, 'dbr'])->name('locations.dbr');
         Route::get('/locations/{location}/edit', [LocationController::class, 'edit'])->name('locations.edit');
-        Route::get('/locations/{location}', [LocationController::class, 'show'])->name('locations.show');
         Route::put('/locations/{location}', [LocationController::class, 'update'])->name('locations.update');
         Route::delete('/locations/{location}', [LocationController::class, 'destroy'])->name('locations.destroy');
 
+        // Bmn codes (master data — admin)
         Route::get('/bmn-codes', [BmnCodeController::class, 'index'])->name('bmn-codes.index');
         Route::get('/bmn-codes/search', [BmnCodeController::class, 'search'])->name('bmn-codes.search');
         Route::get('/bmn-codes/create', [BmnCodeController::class, 'create'])->name('bmn-codes.create');
@@ -129,19 +146,18 @@ Route::middleware('auth')->group(function () {
         Route::put('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'update'])->name('bmn-codes.update');
         Route::delete('/bmn-codes/{bmnCode}', [BmnCodeController::class, 'destroy'])->name('bmn-codes.destroy');
 
-        Route::get('/handover-reports', [HandoverReportController::class, 'index'])->name('handover-reports.index');
+        // Handover reports (tulis)
         Route::get('/handover-reports/create/{unit}', [HandoverReportController::class, 'create'])->name('handover-reports.create');
         Route::post('/handover-reports/{unit}', [HandoverReportController::class, 'store'])->name('handover-reports.store');
-        Route::get('/handover-reports/{handoverReport}', [HandoverReportController::class, 'show'])->name('handover-reports.show');
         Route::get('/handover-reports/{handoverReport}/edit', [HandoverReportController::class, 'edit'])->name('handover-reports.edit');
         Route::put('/handover-reports/{handoverReport}', [HandoverReportController::class, 'update'])->name('handover-reports.update');
-        Route::get('/handover-reports/{handoverReport}/print', [HandoverReportController::class, 'print'])->name('handover-reports.print');
         Route::post('/handover-reports/{handoverReport}/upload-scan', [HandoverReportController::class, 'uploadScan'])->name('handover-reports.upload-scan');
 
+        // Settings
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
         Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
 
-        Route::get('/announcements', [AnnouncementController::class, 'index'])->name('announcements.index');
+        // Announcements (tulis)
         Route::get('/announcements/create', [AnnouncementController::class, 'create'])->name('announcements.create');
         Route::post('/announcements', [AnnouncementController::class, 'store'])->name('announcements.store');
         Route::get('/announcements/{announcement}/edit', [AnnouncementController::class, 'edit'])->name('announcements.edit');
@@ -149,12 +165,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/announcements/{announcement}/toggle-published', [AnnouncementController::class, 'togglePublished'])->name('announcements.toggle-published');
         Route::delete('/announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
 
-        Route::get('/procurement-batches', [ProcurementBatchController::class, 'index'])->name('procurement-batches.index');
+        // Procurement batches (tulis)
         Route::get('/procurement-batches/create', [ProcurementBatchController::class, 'create'])->name('procurement-batches.create');
         Route::post('/procurement-batches', [ProcurementBatchController::class, 'store'])->name('procurement-batches.store');
-        Route::get('/procurement-batches/{procurementBatch}', [ProcurementBatchController::class, 'show'])->name('procurement-batches.show');
         Route::post('/procurement-batches/{procurementBatch}/attach', [ProcurementBatchController::class, 'attachRealizations'])->name('procurement-batches.attach');
         Route::get('/procurement-batches/{procurementBatch}/edit', [ProcurementBatchController::class, 'edit'])->name('procurement-batches.edit');
         Route::put('/procurement-batches/{procurementBatch}', [ProcurementBatchController::class, 'update'])->name('procurement-batches.update');
     });
+
+    // ---- Lihat detail (read-only; param routes) — didaftarkan SETELAH rute create di atas
+    //      supaya "/units/create" dst. tidak tertangkap sebagai id model. ----
+    Route::get('/budgets/{unit}', [BudgetController::class, 'show'])->name('budgets.show');
+    Route::get('/procurement-batches/{procurementBatch}', [ProcurementBatchController::class, 'show'])->name('procurement-batches.show');
+    Route::get('/units/{unit}', [UnitController::class, 'show'])->name('units.show');
+    Route::get('/locations/{location}/dbr', [LocationController::class, 'dbr'])->name('locations.dbr');
+    Route::get('/locations/{location}', [LocationController::class, 'show'])->name('locations.show');
+    Route::get('/handover-reports/{handoverReport}', [HandoverReportController::class, 'show'])->name('handover-reports.show');
+    Route::get('/handover-reports/{handoverReport}/print', [HandoverReportController::class, 'print'])->name('handover-reports.print');
 });

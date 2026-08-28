@@ -16,15 +16,19 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use App\Concerns\ImportsSpreadsheet;
+use App\Concerns\RestrictsByRole;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AssetController extends Controller
 {
     use ImportsSpreadsheet;
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $user = $request->user();
-        $isAdmin = $user->role === 'admin';
+        // admin & pimpinan melihat semua unit; lainnya scoped ke unit sendiri.
+        $isAdmin = $this->canSeeAllUnits();
 
         $assets = Asset::query()
             ->with(['category', 'unit', 'location'])

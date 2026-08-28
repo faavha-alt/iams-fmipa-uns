@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Models\AssetCategory;
 use App\Models\Location;
 use App\Models\Setting;
@@ -13,11 +14,14 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class LocationController extends Controller
 {
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $locations = Location::query()
             ->with('unit')
             ->withCount('assets')
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
             ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->input('search').'%'))
             ->when($request->filled('unit_id'), fn ($q) => $q->where('unit_id', $request->input('unit_id')))
             ->orderBy('name')
@@ -26,7 +30,7 @@ class LocationController extends Controller
 
         return view('locations.index', [
             'locations' => $locations,
-            'units' => Unit::orderBy('name')->get(),
+            'units' => $this->canSeeAllUnits() ? Unit::orderBy('name')->get() : Unit::where('id', auth()->user()->unit_id)->get(),
         ]);
     }
 
@@ -60,6 +64,7 @@ class LocationController extends Controller
     public function show(Request $request, Location $location): View
     {
         $location->load('unit');
+        abort_unless($this->canAccessUnit($location->unit), 403, 'Anda tidak berhak melihat lokasi ini.');
 
         $assetBase = $location->assets();
         $totalAssets = (clone $assetBase)->count();
@@ -170,6 +175,8 @@ class LocationController extends Controller
     public function dbr(Location $location): View
     {
         $location->load('unit');
+        abort_unless($this->canAccessUnit($location->unit), 403, 'Anda tidak berhak melihat lokasi ini.');
+
         $assets = $location->assets()
             ->with('category')
             ->where('status', '!=', 'dihapuskan')

@@ -27,7 +27,11 @@
                         <tr>
                             <td>{{ $unit->name }}</td>
                             <td>{{ $unit->pending_count }} barang</td>
-                            <td><a href="{{ route('handover-reports.create', $unit->id) }}" class="btn btn-sm">Buat BAST</a></td>
+                            <td>
+                                @if (auth()->user()->isAdmin())
+                                <a href="{{ route('handover-reports.create', $unit->id) }}" class="btn btn-sm">Buat BAST</a>
+                                @endif
+                            </td>
                         </tr>
                     @endforeach
                 </tbody>

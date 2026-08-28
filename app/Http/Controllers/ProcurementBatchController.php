@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Models\Budget;
 use App\Models\ProcurementBatch;
 use App\Models\PurchaseRealization;
@@ -13,12 +14,15 @@ use Illuminate\View\View;
 
 class ProcurementBatchController extends Controller
 {
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $batches = ProcurementBatch::query()
             ->with('vendor')
             ->withCount('realizations')
             ->withSum('realizations', 'cost')
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->whereHas('realizations', fn ($sub) => $sub->where('unit_id', auth()->user()->unit_id)))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->latest('tanggal_mulai')
             ->paginate(15)
@@ -26,7 +30,9 @@ class ProcurementBatchController extends Controller
 
         return view('procurement-batches.index', [
             'batches' => $batches,
-            'orphanCount' => PurchaseRealization::whereNull('procurement_batch_id')->count(),
+            'orphanCount' => PurchaseRealization::whereNull('procurement_batch_id')
+                ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
+                ->count(),
             'stats' => $this->dashboardStats(),
         ]);
     }
@@ -111,8 +117,16 @@ class ProcurementBatchController extends Controller
 
     public function show(Request $request, ProcurementBatch $procurementBatch): View
     {
+        // Non-admin hanya bisa melihat pengadaan yang memuat realisasi unitnya sendiri.
+        abort_if(
+            ! $this->canSeeAllUnits() && ! $procurementBatch->realizations()->where('unit_id', auth()->user()->unit_id)->exists(),
+            403,
+            'Anda tidak berhak melihat pengadaan ini.'
+        );
+
         $orphans = PurchaseRealization::whereNull('procurement_batch_id')
             ->with(['vendor', 'unit'])
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->string('search');
                 $q->where('item_name', 'like', "%{$search}%");

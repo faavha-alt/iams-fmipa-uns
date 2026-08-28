@@ -5,7 +5,9 @@
             <h1>Semua Barang {{ $year }}</h1>
             <p>Laporan lintas-vendor — cari & pantau status finalisasi semua barang sekaligus.</p>
         </div>
-        <a href="{{ route('realizations.create') }}" class="btn">+ Tambah Barang</a>
+        @if (auth()->user()->isAdmin())
+            <a href="{{ route('realizations.create') }}" class="btn">+ Tambah Barang</a>
+        @endif
     </div>
 
     <div style="display:flex; gap:6px; margin-bottom: 20px;">
@@ -112,24 +114,28 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if ($r->status === 'belum_final')
-                                            <div class="row-actions">
-                                                <a href="{{ route('realizations.finalize-form', $r->id) }}" class="action-pill action-pill--ok" title="Finalisasi jadi Aset">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                                                    Finalisasi
-                                                </a>
-                                                <a href="{{ route('realizations.edit', $r->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-                                                </a>
-                                                <form method="POST" action="{{ route('realizations.destroy', $r->id) }}" style="display:inline" data-confirm="Yakin hapus realisasi {{ $r->item_name }}? Sisa anggaran akan dikembalikan.">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="icon-btn icon-btn--danger" title="Hapus" aria-label="Hapus">
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        @else
+                                        @if (auth()->user()->isAdmin())
+                                            @if ($r->status === 'belum_final')
+                                                <div class="row-actions">
+                                                    <a href="{{ route('realizations.finalize-form', $r->id) }}" class="action-pill action-pill--ok" title="Finalisasi jadi Aset">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                                                        Finalisasi
+                                                    </a>
+                                                    <a href="{{ route('realizations.edit', $r->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                                    </a>
+                                                    <form method="POST" action="{{ route('realizations.destroy', $r->id) }}" style="display:inline" data-confirm="Yakin hapus realisasi {{ $r->item_name }}? Sisa anggaran akan dikembalikan.">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="icon-btn icon-btn--danger" title="Hapus" aria-label="Hapus">
+                                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @else
+                                                <span style="color: var(--muted); font-size: 0.8rem;">{{ $r->assets_count }} aset dibuat</span>
+                                            @endif
+                                        @elseif ($r->status === 'sudah_final')
                                             <span style="color: var(--muted); font-size: 0.8rem;">{{ $r->assets_count }} aset dibuat</span>
                                         @endif
                                     </td>

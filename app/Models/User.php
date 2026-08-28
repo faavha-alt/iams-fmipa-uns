@@ -40,6 +40,15 @@ public function unit(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     return $this->belongsTo(Unit::class);
 }
 
+/**
+ * Hanya role 'admin' yang boleh mengelola data (membuat/mengedit/menghapus).
+ * Dipakai di view untuk menyembunyikan tombol aksi bagi non-admin.
+ */
+public function isAdmin(): bool
+{
+    return $this->role === 'admin';
+}
+
 public function responsibleAssets(): \Illuminate\Database\Eloquent\Relations\HasMany
 {
     return $this->hasMany(Asset::class, 'responsible_user_id');

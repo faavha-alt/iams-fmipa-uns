@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Concerns\RetriesUniqueConstraint;
 use App\Models\Asset;
 use App\Models\HandoverReport;
@@ -14,24 +15,27 @@ use Illuminate\View\View;
 class HandoverReportController extends Controller
 {
     use RetriesUniqueConstraint;
+    use RestrictsByRole;
 
     public function index(Request $request): View
     {
         $reports = HandoverReport::query()
             ->with(['unit', 'assets'])
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
             ->when($request->filled('unit_id'), fn ($q) => $q->where('unit_id', $request->input('unit_id')))
             ->latest('tanggal_serah_terima')
             ->paginate(15)
             ->appends($request->query());
 
         $unitsWithPending = Unit::whereHas('assets', fn ($q) => $q->whereNotNull('purchase_realization_id')->whereDoesntHave('handoverReports'))
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('id', auth()->user()->unit_id))
             ->withCount(['assets as pending_count' => fn ($q) => $q->whereNotNull('purchase_realization_id')->whereDoesntHave('handoverReports')])
             ->orderBy('name')
             ->get();
 
         return view('handover-reports.index', [
             'reports' => $reports,
-            'units' => Unit::orderBy('name')->get(),
+            'units' => $this->canSeeAllUnits() ? Unit::orderBy('name')->get() : Unit::where('id', auth()->user()->unit_id)->get(),
             'unitsWithPending' => $unitsWithPending,
         ]);
     }
@@ -109,6 +113,7 @@ class HandoverReportController extends Controller
 
     public function show(HandoverReport $handoverReport): View
     {
+        abort_unless($this->canAccessUnit($handoverReport->unit), 403, 'Anda tidak berhak melihat BAST ini.');
         $handoverReport->load(['unit', 'assets.category', 'createdBy']);
 
         return view('handover-reports.show', ['report' => $handoverReport]);
@@ -116,6 +121,7 @@ class HandoverReportController extends Controller
 
     public function print(HandoverReport $handoverReport): View
     {
+        abort_unless($this->canAccessUnit($handoverReport->unit), 403, 'Anda tidak berhak melihat BAST ini.');
         $handoverReport->load(['unit', 'assets.category']);
 
         return view('handover-reports.print', [

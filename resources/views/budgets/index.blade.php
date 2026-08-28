@@ -91,6 +91,7 @@
                 &nbsp;·&nbsp; Realisasi seluruh prodi di bawahnya: <strong>Rp {{ number_format($f['realisasi_anak'], 0, ',', '.') }}</strong>
             </p>
 
+            @if (auth()->user()->isAdmin())
             <details class="review-panel" style="padding: 0;">
                 <summary>Atur Pagu Fakultas</summary>
                 <div class="review-panel__body">
@@ -106,6 +107,7 @@
                     </form>
                 </div>
             </details>
+            @endif
         </div>
     @endforeach
 
@@ -143,6 +145,7 @@
                             <span style="font-size: 0.72rem; color: var(--ink-muted);">{{ $row['percent'] }}%</span>
                         </td>
                         <td>
+                            @if (auth()->user()->isAdmin())
                             <details class="review-panel">
                                 <summary>Atur Pagu</summary>
                                 <div class="review-panel__body">
@@ -161,6 +164,7 @@
                                     </form>
                                 </div>
                             </details>
+                            @endif
                         </td>
                     </tr>
                 @endforeach

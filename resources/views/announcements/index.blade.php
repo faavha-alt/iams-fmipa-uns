@@ -5,7 +5,9 @@
             <h1>Pengumuman</h1>
             <p>Tampil di halaman depan publik (sebelum login) — cuma yang berstatus "Tampil" yang bisa dilihat umum.</p>
         </div>
-        <a href="{{ route('announcements.create') }}" class="btn">+ Tulis Pengumuman</a>
+        @if (auth()->user()->isAdmin())
+            <a href="{{ route('announcements.create') }}" class="btn">+ Tulis Pengumuman</a>
+        @endif
     </div>
 
     @if (session('message'))
@@ -40,6 +42,7 @@
                                 @endif
                             </td>
                             <td>
+                                @if (auth()->user()->isAdmin())
                                 <div class="row-actions">
                                     <a href="{{ route('announcements.edit', $announcement->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -58,6 +61,7 @@
                                         </button>
                                     </form>
                                 </div>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

@@ -5,7 +5,9 @@
             <h1>Lokasi</h1>
             <p>Ruangan/gedung tempat aset ditempatkan.</p>
         </div>
-        <a href="{{ route('locations.create') }}" class="btn">+ Tambah Lokasi</a>
+        @if (auth()->user()->isAdmin())
+            <a href="{{ route('locations.create') }}" class="btn">+ Tambah Lokasi</a>
+        @endif
     </div>
 
     @if (session('message'))
@@ -52,6 +54,7 @@
                             <td>{{ $location->room_code ?? '-' }}</td>
                             <td>{{ $location->assets_count }}</td>
                             <td>
+                                @if (auth()->user()->isAdmin())
                                 <div class="row-actions">
                                     <a href="{{ route('locations.show', $location->id) }}" class="icon-btn" title="Detail" aria-label="Detail">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -67,6 +70,7 @@
                                         </button>
                                     </form>
                                 </div>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Concerns\RetriesUniqueConstraint;
 use App\Models\Asset;
 use App\Models\AssetCategory;
@@ -18,6 +19,7 @@ use Illuminate\View\View;
 class RealizationController extends Controller
 {
     use RetriesUniqueConstraint;
+    use RestrictsByRole;
 
     public function index(Request $request): View
     {
@@ -28,6 +30,7 @@ class RealizationController extends Controller
             ->with(['unit', 'category', 'recordedBy', 'procurementBatch.vendor', 'vendor'])
             ->withCount('assets')
             ->whereBetween('purchase_date', $yearRange)
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
             ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
             ->when($request->filled('unit_id'), fn ($q) => $q->where('unit_id', $request->input('unit_id')))
             ->when($request->filled('search'), fn ($q) => $q->where('item_name', 'like', '%'.$request->input('search').'%'))
@@ -43,7 +46,7 @@ class RealizationController extends Controller
         return view('realizations.index', [
             'grouped' => $grouped,
             'year' => $year,
-            'units' => Unit::orderBy('name')->get(),
+            'units' => $this->canSeeAllUnits() ? Unit::orderBy('name')->get() : Unit::where('id', auth()->user()->unit_id)->get(),
             // Total dihitung dari koleksi $realizations yang sudah dimuat (2 query SUM terpisah
             // dihapus). Sekaligus total jadi konsisten dengan filter yang sedang aktif.
             'totalBelumFinal' => $realizations->where('status', 'belum_final')->sum('cost'),

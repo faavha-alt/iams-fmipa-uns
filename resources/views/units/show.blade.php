@@ -152,9 +152,11 @@
                             <td><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
                             <td><span class="badge badge-{{ $asset->status }}">{{ str_replace('_', ' ', $asset->status) }}</span></td>
                             <td>
+                                @if (auth()->user()->isAdmin())
                                 <a href="{{ route('assets.edit', $asset->id) }}" class="icon-btn" title="Edit Aset" aria-label="Edit Aset">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                 </a>
+                                @endif
                             </td>
                         </tr>
                     @endforeach

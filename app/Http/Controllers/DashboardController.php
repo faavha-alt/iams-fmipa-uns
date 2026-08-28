@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Models\Asset;
 use App\Models\AssetRequest;
 use App\Models\Unit;
@@ -10,10 +11,13 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $user = $request->user();
-        $isAdmin = $user->role === 'admin';
+        // admin & pimpinan melihat seluruh data (laporan); lainnya scoped ke unit sendiri.
+        $isAdmin = $this->canSeeAllUnits();
 
         $assetBase = Asset::query()->when(! $isAdmin, fn ($q) => $q->where('unit_id', $user->unit_id));
         $requestBase = AssetRequest::query()->when(! $isAdmin, fn ($q) => $q->where('unit_id', $user->unit_id));

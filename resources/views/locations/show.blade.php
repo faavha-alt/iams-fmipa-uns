@@ -19,7 +19,9 @@
         </div>
         <div style="display:flex; gap:8px;">
             <a href="{{ route('locations.dbr', $location->id) }}" target="_blank" class="btn btn-outline">🖨 Cetak DBR</a>
+            @if (auth()->user()->isAdmin())
             <a href="{{ route('locations.edit', $location->id) }}" class="btn btn-outline">✏ Edit Lokasi</a>
+            @endif
             <a href="{{ route('locations.index') }}" class="btn btn-outline">← Kembali</a>
         </div>
     </div>
@@ -140,6 +142,7 @@
                 @csrf
 
                 <div style="display:flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                    @if (auth()->user()->isAdmin())
                     <p style="font-size: 0.8rem; color: var(--muted); margin: 0;">
                         Centang aset yang mau diproses — cetak sticker atau hapus sekaligus, tidak perlu satu per satu.
                     </p>
@@ -149,6 +152,7 @@
                                 onclick="return confirm('Yakin hapus semua aset yang dicentang? Tindakan ini tidak bisa dibatalkan.')"
                                 class="btn btn-sm btn-danger">🗑 Hapus yang Dicentang</button>
                     </div>
+                    @endif
                 </div>
                 @error('asset_ids') <div class="form-error" style="margin-bottom: 10px;">{{ $message }}</div> @enderror
 
@@ -156,33 +160,41 @@
                 <table>
                     <thead>
                         <tr>
+                            @if (auth()->user()->isAdmin())
                             <th style="width: 36px;">
                                 <input type="checkbox" onclick="document.querySelectorAll('.asset-check').forEach(c => c.checked = this.checked)">
                             </th>
+                            @endif
                             <th><a href="{{ $sortLink('name') }}" class="sort-link">Nama {{ $sortIcon('name') }}</a></th>
                             <th><a href="{{ $sortLink('brand') }}" class="sort-link">Merk {{ $sortIcon('brand') }}</a></th>
                             <th>Tipe/Seri</th>
                             <th><a href="{{ $sortLink('category') }}" class="sort-link">Kategori {{ $sortIcon('category') }}</a></th>
                             <th><a href="{{ $sortLink('condition') }}" class="sort-link">Kondisi {{ $sortIcon('condition') }}</a></th>
                             <th><a href="{{ $sortLink('status') }}" class="sort-link">Status {{ $sortIcon('status') }}</a></th>
+                            @if (auth()->user()->isAdmin())
                             <th></th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
                         @foreach ($assets as $asset)
                             <tr>
+                                @if (auth()->user()->isAdmin())
                                 <td><input type="checkbox" class="asset-check" name="asset_ids[]" value="{{ $asset->id }}"></td>
+                                @endif
                                 <td>{{ $asset->name }}</td>
                                 <td>{{ $asset->brand ?? '-' }}</td>
                                 <td>{{ collect([$asset->model, $asset->serial_number])->filter()->implode(' / ') ?: '-' }}</td>
                                 <td>{{ $asset->category?->name ?? '-' }}</td>
                                 <td><span class="badge badge-{{ $asset->condition }}">{{ str_replace('_', ' ', $asset->condition) }}</span></td>
                                 <td>{{ str_replace('_', ' ', $asset->status) }}</td>
+                                @if (auth()->user()->isAdmin())
                                 <td>
                                     <a href="{{ route('assets.edit', $asset->id) }}" class="icon-btn" title="Edit" aria-label="Edit">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                     </a>
                                 </td>
+                                @endif
                             </tr>
                         @endforeach
                     </tbody>

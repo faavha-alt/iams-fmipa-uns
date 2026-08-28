@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Concerns\RestrictsByRole;
 use App\Models\AssetCategory;
 use App\Models\Unit;
 use App\Models\User;
@@ -12,11 +13,14 @@ use Illuminate\View\View;
 
 class UnitController extends Controller
 {
+    use RestrictsByRole;
+
     public function index(Request $request): View
     {
         $units = Unit::query()
             ->with(['parent', 'head'])
             ->withCount('assets')
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('id', auth()->user()->unit_id))
             ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->input('search').'%'))
             ->when($request->filled('type'), fn ($q) => $q->where('type', $request->input('type')))
             ->orderBy('type')
@@ -32,6 +36,7 @@ class UnitController extends Controller
      */
     public function show(Request $request, Unit $unit): View
     {
+        abort_unless($this->canAccessUnit($unit), 403, 'Anda tidak berhak melihat unit ini.');
         $unit->load(['parent', 'head', 'children']);
 
         $assetBase = $unit->assets();
