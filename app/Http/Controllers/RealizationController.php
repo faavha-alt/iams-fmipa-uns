@@ -15,6 +15,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class RealizationController extends Controller
 {
@@ -52,6 +54,86 @@ class RealizationController extends Controller
             'totalBelumFinal' => $realizations->where('status', 'belum_final')->sum('cost'),
             'totalSudahFinal' => $realizations->where('status', 'sudah_final')->sum('cost'),
         ]);
+    }
+
+    /**
+     * Rekap per NAMA BARANG (bukan per transaksi) untuk satu tahun anggaran.
+     * Semua barang dengan nama sama digabung: total unit, total biaya, dan jumlah transaksinya.
+     * Default tanpa filter status → seluruh status (belum final + sudah final) ikut terhitung.
+     */
+    public function recap(Request $request): View
+    {
+        $year = (int) $request->input('year', now()->year);
+        $items = $this->recapQuery($request, $year);
+
+        return view('realizations.recap', [
+            'items' => $items,
+            'year' => $year,
+            'units' => $this->canSeeAllUnits() ? Unit::orderBy('name')->get() : Unit::where('id', auth()->user()->unit_id)->get(),
+            'grandQuantity' => (int) $items->sum('total_quantity'),
+            'grandCost' => (float) $items->sum('total_cost'),
+        ]);
+    }
+
+    /**
+     * Export rekap barang ke Excel (.xlsx) memakai filter yang sama dengan halaman rekap,
+     * supaya angka di file selalu konsisten dengan yang sedang dilihat di layar.
+     */
+    public function exportRecap(Request $request)
+    {
+        $year = (int) $request->input('year', now()->year);
+        $items = $this->recapQuery($request, $year);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Rekap Barang '.$year);
+        $sheet->fromArray(['Nama Barang', 'Jumlah Unit', 'Jumlah Transaksi', 'Total Biaya'], null, 'A1');
+
+        $row = 2;
+        foreach ($items as $item) {
+            $sheet->fromArray([
+                $item->item_name,
+                (int) $item->total_quantity,
+                (int) $item->total_records,
+                (float) $item->total_cost,
+            ], null, 'A'.$row);
+            $row++;
+        }
+
+        $sheet->fromArray([
+            'TOTAL',
+            (int) $items->sum('total_quantity'),
+            (int) $items->sum('total_records'),
+            (float) $items->sum('total_cost'),
+        ], null, 'A'.$row);
+
+        $sheet->getStyle('A1:D1')->getFont()->setBold(true);
+        $sheet->getStyle('A'.$row.':D'.$row)->getFont()->setBold(true);
+        $sheet->getStyle('B2:B'.$row)->getNumberFormat()->setFormatCode('#,##0');
+        $sheet->getStyle('D2:D'.$row)->getNumberFormat()->setFormatCode('#,##0');
+        foreach (range('A', 'D') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'rekap_barang').'.xlsx';
+        (new Xlsx($spreadsheet))->save($tempPath);
+
+        return response()->download($tempPath, "rekap_barang_{$year}.xlsx")->deleteFileAfterSend(true);
+    }
+
+    /** Query agregat per nama barang — dipakai bersama oleh halaman rekap dan export Excel. */
+    private function recapQuery(Request $request, int $year)
+    {
+        return PurchaseRealization::query()
+            ->selectRaw('item_name, SUM(quantity) as total_quantity, SUM(cost) as total_cost, COUNT(*) as total_records')
+            ->whereBetween('purchase_date', ["{$year}-01-01", "{$year}-12-31"])
+            ->when(! $this->canSeeAllUnits(), fn ($q) => $q->where('unit_id', auth()->user()->unit_id))
+            ->when($request->filled('unit_id'), fn ($q) => $q->where('unit_id', $request->input('unit_id')))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->when($request->filled('search'), fn ($q) => $q->where('item_name', 'like', '%'.$request->input('search').'%'))
+            ->groupBy('item_name')
+            ->orderBy('item_name')
+            ->get();
     }
 
     public function create(Request $request): View

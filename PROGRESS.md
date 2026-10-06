@@ -38,3 +38,19 @@ Dibuat: 2026-08-26
 
 ### 2026-08-26
 - Ditambahkan ke Project Workspace, dokumentasi tracking diisi berdasarkan eksplorasi kode existing (bukan dari rencana asli developer).
+
+### 2026-10-06 — Halaman "Rekap Barang" (agregat per nama barang per tahun)
+- Fitur baru: `RealizationController::recap()` + route `GET /realizations/recap` (`realizations.recap`, grup read-only `auth`, scoping role sama seperti index) + view `resources/views/realizations/recap.blade.php`.
+- Isi: semua nama barang pada tahun terpilih (default tahun berjalan), digabung lintas pengadaan/unit → total unit, jumlah transaksi, total biaya; grand total di footer; filter cari/nama barang/tahun/unit.
+- Menu sidebar "Rekap Barang" (seksi Pengadaan); `Barang Pengadaan` dikecualikan agar tidak ikut ter-highlight; tombol pintasan ditambah di halaman Semua Barang & Daftar Pengadaan.
+- Verifikasi: `tests/Feature/RecapBarangTest.php` (baru) PASS — agregasi & filter tahun benar. `php artisan test`: 7 passed; 1 gagal **pra-eksisting** `tests/Feature/ExampleTest.php` (test skeleton tanpa `RefreshDatabase`, `/` query tabel `assets` di DB in-memory kosong) — tidak terkait perubahan ini.
+- Catatan: SQL agregat memakai `groupBy('item_name')` dengan semua kolom non-agregat di GROUP BY → aman untuk `ONLY_FULL_GROUP_BY` MySQL.
+- Belum dilakukan: deploy ke produksi (`./deploy.sh`).
+
+### 2026-10-06 (lanjutan) — Filter status + Export Excel di Rekap Barang
+- Rekap default = **semua status** (belum final + sudah final) sudah benar sejak awal; ditambah filter status opsional (Semua/Belum Final/Sudah Final).
+- Route baru `GET /realizations/recap/export` (`realizations.recap.export`) → `RealizationController::exportRecap()`: unduh `.xlsx` (`rekap_barang_{tahun}.xlsx`) lewat PhpSpreadsheet, kolom Nama Barang/Jumlah Unit/Jumlah Transaksi/Total Biaya + baris TOTAL, mengikuti filter yang sama.
+- Query agregat diekstrak ke `recapQuery()` supaya halaman & export tidak bisa beda angka.
+- Tombol **Export Excel** di header halaman + di baris filter (membawa query aktif).
+- Verifikasi: `php artisan test --filter=RecapBarangTest` → 3 passed (agregasi, filter status, unduh Excel). Lint & route OK. 1 test gagal pra-eksisting (`ExampleTest`) tidak berubah.
+- Belum deploy.

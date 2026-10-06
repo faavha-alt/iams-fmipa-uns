@@ -13,6 +13,7 @@
     <div style="display:flex; gap:6px; margin-bottom: 20px;">
         <a href="{{ route('procurement-batches.index') }}" class="btn btn-sm" style="background: var(--navy); border-color: var(--navy);">Daftar Pengadaan</a>
         <a href="{{ route('realizations.index') }}" class="btn btn-outline btn-sm">Semua Barang (lintas vendor)</a>
+        <a href="{{ route('realizations.recap') }}" class="btn btn-outline btn-sm">Rekap Barang</a>
     </div>
 
     @if (session('message'))

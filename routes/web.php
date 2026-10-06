@@ -59,6 +59,8 @@ Route::middleware('auth')->group(function () {
     // ---- Lihat (read-only; scoping per role di controller) ----
     Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
     Route::get('/realizations', [RealizationController::class, 'index'])->name('realizations.index');
+    Route::get('/realizations/recap', [RealizationController::class, 'recap'])->name('realizations.recap');
+    Route::get('/realizations/recap/export', [RealizationController::class, 'exportRecap'])->name('realizations.recap.export');
     Route::get('/procurement-batches', [ProcurementBatchController::class, 'index'])->name('procurement-batches.index');
     Route::get('/units', [UnitController::class, 'index'])->name('units.index');
     Route::get('/locations', [LocationController::class, 'index'])->name('locations.index');

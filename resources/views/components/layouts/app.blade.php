@@ -60,9 +60,13 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7h-9M14 17H5M5 7l3-3-3 3 3 3M20 17l-3 3 3-3-3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Pengadaan
                 </a>
-                <a href="{{ route('realizations.index') }}" class="{{ request()->routeIs('realizations.*') ? 'is-active' : '' }}">
+                <a href="{{ route('realizations.index') }}" class="{{ request()->routeIs('realizations.*') && ! request()->routeIs('realizations.recap') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M9 15h6" stroke-linecap="round"/></svg>
                     Barang Pengadaan
+                </a>
+                <a href="{{ route('realizations.recap') }}" class="{{ request()->routeIs('realizations.recap') ? 'is-active' : '' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5M4 19h16M8 16V9M12 16v-4M16 16v-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Rekap Barang
                 </a>
                 <a href="{{ route('budgets.index') }}" class="{{ request()->routeIs('budgets.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
