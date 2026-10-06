@@ -53,4 +53,4 @@ Dibuat: 2026-08-26
 - Query agregat diekstrak ke `recapQuery()` supaya halaman & export tidak bisa beda angka.
 - Tombol **Export Excel** di header halaman + di baris filter (membawa query aktif).
 - Verifikasi: `php artisan test --filter=RecapBarangTest` → 3 passed (agregasi, filter status, unduh Excel). Lint & route OK. 1 test gagal pra-eksisting (`ExampleTest`) tidak berubah.
-- Belum deploy.
+- **Sudah di-deploy** 2026-10-06 via `bash deploy.sh -y` (commit `f0dfa4f`): server fast-forward, composer OK, tidak ada migrasi baru, cache dibersihkan. Cek live: `/login` 200, `/realizations/recap` & `/realizations/recap/export` 302 (redirect login — benar, halaman butuh auth), route `realizations.recap*` terdaftar di server.
